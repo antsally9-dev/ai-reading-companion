@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Replaced hover-only source previews with an always-visible vertical conversation timeline.
 - Added a per-document companion-note destination under `Folder/Note/AI conversations.md` with a configurable filename.
 - Added the selected source passage to the default template as a collapsed native Obsidian callout.
 - Changed conversation-list titles to begin with the selected source text for faster switching.

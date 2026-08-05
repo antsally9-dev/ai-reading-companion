@@ -1555,10 +1555,17 @@ class AiQuestionView extends ItemView {
       }
       const preview = this.getSessionPreview(session);
       itemText.createSpan({
-        cls: "ai-agent-session-title",
-        text: preview.length > 58 ? `${preview.slice(0, 58)}…` : preview,
+        cls: "ai-agent-session-excerpt-label",
+        text: "Selected passage",
       });
-      selectButton.setAttr("title", preview);
+      itemText.createSpan({
+        cls: "ai-agent-session-title",
+        text: preview.length > 120 ? `${preview.slice(0, 120)}…` : preview,
+      });
+      selectButton.setAttr(
+        "aria-label",
+        `Open conversation ${session.id}: ${preview.slice(0, 80)}`,
+      );
       session.listMetaEl = itemText.createSpan({
         cls: "ai-agent-session-meta",
         text: this.getSessionMeta(session),
