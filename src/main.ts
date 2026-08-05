@@ -1462,19 +1462,19 @@ class AiQuestionView extends ItemView {
         cls: "ai-agent-session-select",
         attr: { type: "button" },
       });
-      const itemText = selectButton.createDiv({ cls: "ai-agent-session-text" });
-      itemText.createDiv({
+      const itemText = selectButton.createSpan({ cls: "ai-agent-session-text" });
+      itemText.createSpan({
         cls: "ai-agent-session-title",
         text: this.getSessionTitle(session),
       });
       const preview = String(session.context.excerpt || "")
         .replace(/\s+/g, " ")
         .trim();
-      itemText.createDiv({
+      itemText.createSpan({
         cls: "ai-agent-session-preview",
         text: preview.length > 72 ? `${preview.slice(0, 72)}…` : preview,
       });
-      session.listMetaEl = itemText.createDiv({
+      session.listMetaEl = itemText.createSpan({
         cls: "ai-agent-session-meta",
         text: this.getSessionMeta(session),
       });

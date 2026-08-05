@@ -155,16 +155,19 @@
 }
 
 .ai-agent-session-list {
-  display: grid;
-  max-height: 13rem;
+  display: flex;
+  max-height: 10.5rem;
   padding: 0 0.65rem 0.65rem;
-  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  flex-direction: column;
   gap: 0.42rem;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
 .ai-agent-session-item {
   display: grid;
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
@@ -180,7 +183,11 @@
 }
 
 .ai-agent-session-select {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
+  overflow: hidden;
   padding: 0.48rem 0.55rem;
   border: 0;
   border-radius: 0;
@@ -188,6 +195,7 @@
   color: var(--text-normal);
   background: transparent;
   text-align: left;
+  white-space: normal;
 }
 
 .ai-agent-session-select:hover {
@@ -197,9 +205,18 @@
 .ai-agent-session-title,
 .ai-agent-session-preview,
 .ai-agent-session-meta {
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ai-agent-session-text {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .ai-agent-session-title {
@@ -915,6 +932,18 @@
 }
 
 @container ai-agent-chat (max-width: 440px) {
+  .ai-agent-session-list {
+    max-height: 8.5rem;
+  }
+
+  .ai-agent-session-preview {
+    display: none;
+  }
+
+  .ai-agent-session-select {
+    padding-block: 0.4rem;
+  }
+
   .ai-agent-chat-header {
     padding-block: 0.8rem;
   }

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed conversation-list overflow and text overlap in narrow sidebars.
 - Made rendered AI answers explicitly text-selectable inside Obsidian views.
 - Added a one-click action to select an entire answer for saving.
 - Added an in-memory conversation list with switching, per-conversation deletion, and clear-all controls.
