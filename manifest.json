@@ -1,0 +1,10 @@
+{
+  "id": "ai-reading-companion",
+  "name": "AI Reading Companion",
+  "version": "1.0.0",
+  "minAppVersion": "1.11.4",
+  "description": "Chat with AI about selected Markdown and save only the excerpts you confirm.",
+  "author": "antsally9-dev",
+  "authorUrl": "https://github.com/antsally9-dev",
+  "isDesktopOnly": true
+}
