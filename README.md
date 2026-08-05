@@ -7,6 +7,8 @@ The conversation, reasoning output, search results, and unselected answer text a
 ## Features
 
 - Multi-turn chat grounded in the selected passage.
+- An in-memory conversation list that keeps separate selections available until the view or Obsidian closes.
+- Select any part of an answer, select an entire answer with one click, and delete one or all temporary conversations.
 - OpenAI, Kimi Coding, and custom OpenAI-compatible provider presets.
 - Optional images from Obsidian embeds, Markdown images, local Vault files, or public URLs.
 - Kimi Coding web search and page fetch with inline citations and a source list.

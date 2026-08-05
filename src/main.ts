@@ -1170,6 +1170,10 @@ class AiQuestionView extends ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
+    this.sessions = [];
+    this.activeSession = null;
+    this.nextSessionId = 1;
+    this.sessionListExpanded = true;
     this.context = null;
     this.sessionGeneration = 0;
     this.renderComponent = null;
@@ -1210,8 +1214,61 @@ class AiQuestionView extends ItemView {
     }));
   }
 
-  async onOpen(): Promise<void> {
+  createSession(context) {
+    const webSearchAvailable = this.plugin.supportsWebSearch();
+    return {
+      id: this.nextSessionId++,
+      context,
+      createdAt: Date.now(),
+      messages: [],
+      nextMessageId: 1,
+      isRequesting: false,
+      sessionImages: null,
+      webSearchAvailable,
+      webSearchEnabled:
+        webSearchAvailable &&
+        this.plugin.settings.aiWebSearchEnabled !== false,
+      imageSelections: ((context && context.images) || []).map((image) => ({
+        ...image,
+        selected:
+          this.plugin.settings.aiAutoSelectImages === true &&
+          (image.size === null || image.size <= MAX_IMAGE_BYTES),
+      })),
+      draft: "",
+    };
+  }
+
+  syncActiveSession() {
+    if (!this.activeSession) {
+      return;
+    }
+    this.activeSession.nextMessageId = this.nextMessageId;
+    this.activeSession.isRequesting = this.isRequesting;
+    this.activeSession.sessionImages = this.sessionImages;
+    this.activeSession.webSearchEnabled = this.webSearchEnabled;
+    this.activeSession.messages = this.messages;
+    this.activeSession.imageSelections = this.imageSelections;
+    this.activeSession.draft = this.questionEl
+      ? this.questionEl.value
+      : this.activeSession.draft || "";
+  }
+
+  activateSession(session) {
+    this.activeSession = session;
+    this.context = session.context;
+    this.messages = session.messages;
+    this.nextMessageId = session.nextMessageId;
+    this.isRequesting = session.isRequesting;
     this.isClosed = false;
+    this.sessionImages = session.sessionImages;
+    this.webSearchAvailable = session.webSearchAvailable;
+    this.webSearchEnabled = session.webSearchEnabled;
+    this.imageSelections = session.imageSelections;
+    this.imageCheckboxes = [];
+  }
+
+  renderWaitingState() {
+    this.contentEl.empty();
     this.contentEl.addClass("ai-agent-chat-content");
     const waiting = this.contentEl.createDiv({
       cls: "ai-agent-chat-waiting",
@@ -1224,23 +1281,216 @@ class AiQuestionView extends ItemView {
     });
   }
 
-  async startSession(context) {
+  renderActiveSession() {
     this.sessionGeneration += 1;
     if (this.renderComponent) {
       this.renderComponent.unload();
       this.renderComponent = null;
     }
-    this.resetSessionState(context);
+    if (!this.activeSession || !this.context) {
+      this.renderWaitingState();
+      return;
+    }
+
     this.contentEl.empty();
     this.contentEl.addClass("ai-agent-chat-content");
     this.renderComponent = new Component();
     this.renderComponent.load();
-
     this.renderHeader(this.contentEl);
+    this.renderSessionBrowser(this.contentEl);
     const shell = this.contentEl.createDiv({ cls: "ai-agent-chat-shell" });
     this.renderContextPanel(shell);
     this.renderChatPanel(shell);
+    this.questionEl.value = this.activeSession.draft || "";
+    this.resizeComposer();
+    this.updateComposerState();
     this.contentEl.win.requestAnimationFrame(() => this.questionEl.focus());
+  }
+
+  async onOpen(): Promise<void> {
+    this.isClosed = false;
+    if (this.activeSession) {
+      this.renderActiveSession();
+      return;
+    }
+    this.renderWaitingState();
+  }
+
+  async startSession(context) {
+    if (this.isRequesting) {
+      new Notice("Wait for the current answer before starting another conversation.");
+      return;
+    }
+    this.syncActiveSession();
+    const session = this.createSession(context);
+    this.sessions.unshift(session);
+    this.activateSession(session);
+    this.renderActiveSession();
+  }
+
+  switchSession(sessionId) {
+    if (this.isRequesting) {
+      new Notice("Wait for the current answer before switching conversations.");
+      return;
+    }
+    const session = this.sessions.find((item) => item.id === sessionId);
+    if (!session || session === this.activeSession) {
+      return;
+    }
+    this.syncActiveSession();
+    this.activateSession(session);
+    this.renderActiveSession();
+  }
+
+  deleteSession(sessionId) {
+    const index = this.sessions.findIndex((item) => item.id === sessionId);
+    if (index < 0) {
+      return;
+    }
+    const session = this.sessions[index];
+    if (session.isRequesting) {
+      new Notice("Wait for this conversation to finish before deleting it.");
+      return;
+    }
+    this.syncActiveSession();
+    const deletingActive = session === this.activeSession;
+    this.sessions.splice(index, 1);
+    if (!deletingActive) {
+      this.renderActiveSession();
+      return;
+    }
+    const nextSession = this.sessions[index] || this.sessions[index - 1] || null;
+    if (nextSession) {
+      this.activateSession(nextSession);
+    } else {
+      this.activeSession = null;
+      this.resetSessionState(null);
+    }
+    this.renderActiveSession();
+  }
+
+  clearAllSessions() {
+    if (this.sessions.some((session) => session.isRequesting)) {
+      new Notice("Wait for the current answer before clearing conversations.");
+      return;
+    }
+    const confirmed = this.contentEl.win.confirm(
+      "Clear all temporary conversations? Saved note excerpts will not be affected.",
+    );
+    if (!confirmed) {
+      return;
+    }
+    this.sessions.length = 0;
+    this.activeSession = null;
+    this.resetSessionState(null);
+    this.renderActiveSession();
+  }
+
+  getSessionTitle(session) {
+    if (session.context.sourceHeading) {
+      return session.context.sourceHeading;
+    }
+    return String(session.context.sourceFile || "Selected passage")
+      .replace(/\.md$/i, "")
+      .split("/")
+      .pop();
+  }
+
+  getSessionMeta(session) {
+    const turns = session.messages.filter(
+      (message) => message.role === "assistant",
+    ).length;
+    return `${moment(session.createdAt).format("HH:mm")} · ${turns} ${turns === 1 ? "turn" : "turns"}`;
+  }
+
+  renderSessionBrowser(contentEl) {
+    const browser = contentEl.createDiv({ cls: "ai-agent-session-browser" });
+    const toolbar = browser.createDiv({ cls: "ai-agent-session-toolbar" });
+    const toggleButton = toolbar.createEl("button", {
+      cls: "ai-agent-session-toggle clickable-icon",
+      attr: {
+        type: "button",
+        "aria-expanded": String(this.sessionListExpanded),
+      },
+    });
+    const toggleIcon = toggleButton.createSpan();
+    setIcon(toggleIcon, this.sessionListExpanded ? "chevron-down" : "chevron-right");
+    toggleButton.createSpan({ text: `Conversations (${this.sessions.length})` });
+
+    const toolbarActions = toolbar.createDiv({ cls: "ai-agent-session-toolbar-actions" });
+    const deleteCurrentButton = toolbarActions.createEl("button", {
+      cls: "clickable-icon",
+      attr: {
+        type: "button",
+        "aria-label": "Delete current conversation",
+        title: "Delete current conversation",
+      },
+    });
+    setIcon(deleteCurrentButton, "trash-2");
+    deleteCurrentButton.addEventListener("click", () => {
+      if (this.activeSession) {
+        this.deleteSession(this.activeSession.id);
+      }
+    });
+
+    const clearButton = toolbarActions.createEl("button", {
+      cls: "clickable-icon",
+      attr: {
+        type: "button",
+        "aria-label": "Clear all conversations",
+        title: "Clear all conversations",
+      },
+    });
+    setIcon(clearButton, "list-x");
+    clearButton.addEventListener("click", () => this.clearAllSessions());
+
+    const list = browser.createDiv({ cls: "ai-agent-session-list" });
+    list.toggle(this.sessionListExpanded);
+    toggleButton.addEventListener("click", () => {
+      this.sessionListExpanded = !this.sessionListExpanded;
+      list.toggle(this.sessionListExpanded);
+      toggleButton.setAttr("aria-expanded", String(this.sessionListExpanded));
+      toggleIcon.empty();
+      setIcon(toggleIcon, this.sessionListExpanded ? "chevron-down" : "chevron-right");
+    });
+
+    for (const session of this.sessions) {
+      const item = list.createDiv({
+        cls: `ai-agent-session-item${session === this.activeSession ? " is-active" : ""}`,
+      });
+      const selectButton = item.createEl("button", {
+        cls: "ai-agent-session-select",
+        attr: { type: "button" },
+      });
+      const itemText = selectButton.createDiv({ cls: "ai-agent-session-text" });
+      itemText.createDiv({
+        cls: "ai-agent-session-title",
+        text: this.getSessionTitle(session),
+      });
+      const preview = String(session.context.excerpt || "")
+        .replace(/\s+/g, " ")
+        .trim();
+      itemText.createDiv({
+        cls: "ai-agent-session-preview",
+        text: preview.length > 72 ? `${preview.slice(0, 72)}…` : preview,
+      });
+      session.listMetaEl = itemText.createDiv({
+        cls: "ai-agent-session-meta",
+        text: this.getSessionMeta(session),
+      });
+      selectButton.addEventListener("click", () => this.switchSession(session.id));
+
+      const deleteButton = item.createEl("button", {
+        cls: "ai-agent-session-delete clickable-icon",
+        attr: {
+          type: "button",
+          "aria-label": `Delete conversation: ${this.getSessionTitle(session)}`,
+          title: "Delete conversation",
+        },
+      });
+      setIcon(deleteButton, "x");
+      deleteButton.addEventListener("click", () => this.deleteSession(session.id));
+    }
   }
 
   renderHeader(contentEl) {
@@ -1428,6 +1678,7 @@ class AiQuestionView extends ItemView {
     this.questionEl.addEventListener("input", () => {
       this.resizeComposer();
       this.updateComposerState();
+      this.syncActiveSession();
     });
     this.questionEl.addEventListener("keydown", (event) => {
       if (
@@ -1461,6 +1712,7 @@ class AiQuestionView extends ItemView {
     this.webSearchCheckbox.disabled = !this.webSearchAvailable;
     this.webSearchCheckbox.addEventListener("change", () => {
       this.webSearchEnabled = this.webSearchCheckbox.checked;
+      this.syncActiveSession();
       this.statusEl.textContent = this.webSearchEnabled
         ? "Web enabled · Enter to send"
         : "Passage and conversation only · Enter to send";
@@ -1486,6 +1738,11 @@ class AiQuestionView extends ItemView {
     this.sendButton.addEventListener("click", () => {
       void this.submitQuestion();
     });
+    for (const message of this.messages) {
+      this.appendMessage(message);
+    }
+    this.updateEmptyState();
+    this.updateTurnCounter();
     this.updateComposerState();
   }
 
@@ -1519,6 +1776,7 @@ class AiQuestionView extends ItemView {
     this.questionEl.value = "";
     this.resizeComposer();
     this.isRequesting = true;
+    this.syncActiveSession();
     this.updateComposerState();
     this.statusEl.textContent = this.sessionImages.length
       ? `Thinking with the passage and ${this.sessionImages.length} images…`
@@ -1581,6 +1839,7 @@ class AiQuestionView extends ItemView {
         sessionGeneration === this.sessionGeneration
       ) {
         this.isRequesting = false;
+        this.syncActiveSession();
         this.updateTurnCounter();
         this.updateEmptyState();
         this.updateComposerState();
@@ -1618,7 +1877,7 @@ class AiQuestionView extends ItemView {
       .then(() => this.scrollConversation())
       .catch((error) => {
         body.setText(message.content);
-      console.error("AI Reading Companion: render message markdown", error);
+        console.error("AI Reading Companion: render message markdown", error);
       });
 
     if (message.role === "assistant") {
@@ -1638,6 +1897,16 @@ class AiQuestionView extends ItemView {
 
   renderAssistantActions(message, card) {
     const actions = card.createDiv({ cls: "ai-agent-message-actions" });
+    const selectAllButton = actions.createEl("button", {
+      cls: "ai-agent-message-action",
+    });
+    const selectAllIcon = selectAllButton.createSpan();
+    setIcon(selectAllIcon, "text-select");
+    selectAllButton.createSpan({ text: "Select entire answer" });
+    selectAllButton.addEventListener("click", () => {
+      this.selectWholeAnswer(message);
+    });
+
     const saveButton = actions.createEl("button", {
       cls: "ai-agent-message-action",
     });
@@ -1645,6 +1914,7 @@ class AiQuestionView extends ItemView {
     setIcon(saveIcon, "notebook-pen");
     saveButton.createSpan({ text: "Save selected text" });
     message.saveButton = saveButton;
+    saveButton.disabled = !message.selectedText;
     saveButton.addEventListener("click", () => {
       void this.saveAssistantSelection(message);
     });
@@ -1655,7 +1925,9 @@ class AiQuestionView extends ItemView {
     const openIcon = openButton.createSpan();
     setIcon(openIcon, "external-link");
     openButton.createSpan({ text: "Open saved note" });
-    openButton.hide();
+    if (!message.savedFile) {
+      openButton.hide();
+    }
     message.openButton = openButton;
     openButton.addEventListener("click", () => {
       if (message.savedFile) {
@@ -1665,7 +1937,11 @@ class AiQuestionView extends ItemView {
 
     message.actionStatusEl = actions.createSpan({
       cls: "ai-agent-message-action-status",
-      text: "Select answer text to save",
+      text: message.savedFile
+        ? `Appended to: ${message.savedFile.basename}`
+        : message.selectedText
+          ? `Selected ${message.selectedText.length} characters`
+          : "Select answer text to save",
     });
   }
 
@@ -1735,8 +2011,29 @@ class AiQuestionView extends ItemView {
       return;
     }
     message.selectedText = selectedText;
+    message.selectedAll = false;
     message.saveButton.disabled = false;
     message.actionStatusEl.textContent = `Selected ${selectedText.length} characters`;
+  }
+
+  selectWholeAnswer(message) {
+    const selectedText = String(message.content || "").trim();
+    if (!selectedText || !message.bodyEl) {
+      return;
+    }
+    message.selectedText = selectedText;
+    message.selectedAll = true;
+    message.saveButton.disabled = false;
+    message.actionStatusEl.textContent = `Selected the entire answer · ${selectedText.length} characters`;
+
+    const doc = message.bodyEl.doc || message.bodyEl.ownerDocument;
+    const selection = doc && doc.getSelection ? doc.getSelection() : null;
+    if (selection && doc.createRange) {
+      const range = doc.createRange();
+      range.selectNodeContents(message.bodyEl);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
   }
 
   getSelectionWithin(containerEl) {
@@ -1754,8 +2051,9 @@ class AiQuestionView extends ItemView {
   }
 
   async saveAssistantSelection(message) {
-    const selectedText =
-      this.getSelectionWithin(message.bodyEl) || message.selectedText;
+    const selectedText = message.selectedAll
+      ? message.selectedText
+      : this.getSelectionWithin(message.bodyEl) || message.selectedText;
     if (!selectedText) {
       new Notice("Select the text you want to keep in this AI answer first.");
       return;
@@ -1772,9 +2070,15 @@ class AiQuestionView extends ItemView {
       );
       message.savedFile = targetFile;
       message.selectedText = "";
-      message.saveButton.disabled = false;
+      message.selectedAll = false;
+      message.saveButton.disabled = true;
       message.openButton.show();
       message.actionStatusEl.textContent = `Appended to: ${targetFile.basename}`;
+      const doc = message.bodyEl.doc || message.bodyEl.ownerDocument;
+      const selection = doc && doc.getSelection ? doc.getSelection() : null;
+      if (selection) {
+        selection.removeAllRanges();
+      }
       new Notice("The selected text was appended. The rest of the conversation remains unsaved.");
     } catch (error) {
       message.saveButton.disabled = false;
@@ -1814,13 +2118,17 @@ class AiQuestionView extends ItemView {
   }
 
   updateTurnCounter() {
-    if (!this.turnCounterEl) {
-      return;
-    }
     const turns = this.messages.filter(
       (message) => message.role === "assistant",
     ).length;
-    this.turnCounterEl.textContent = `${turns} turns`;
+    if (this.turnCounterEl) {
+      this.turnCounterEl.textContent = `${turns} turns`;
+    }
+    if (this.activeSession && this.activeSession.listMetaEl) {
+      this.activeSession.listMetaEl.textContent = this.getSessionMeta(
+        this.activeSession,
+      );
+    }
   }
 
   updateEmptyState(forceVisible?: boolean) {
@@ -1886,6 +2194,8 @@ class AiQuestionView extends ItemView {
       this.renderComponent.unload();
       this.renderComponent = null;
     }
+    this.sessions.length = 0;
+    this.activeSession = null;
     this.messages.length = 0;
     this.sessionImages = null;
     if (this.questionEl) {

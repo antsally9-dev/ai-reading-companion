@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 let requestHandler = async () => {
   throw new Error("Unexpected network request in smoke test.");
 };
+let registeredViewFactory = null;
 
 class Plugin {
   async loadData() {
@@ -15,11 +16,31 @@ class Plugin {
   async saveData(data) {
     this.testData = data;
   }
+
+  registerView(_type, factory) {
+    registeredViewFactory = factory;
+  }
+
+  addSettingTab() {}
+  registerDomEvent() {}
+  registerEvent() {}
+  addCommand() {}
 }
 
-class ItemView {}
+class ItemView {
+  constructor(leaf) {
+    this.leaf = leaf;
+    this.app = leaf.app;
+  }
+}
 class MarkdownView {}
-class PluginSettingTab {}
+class Modal {}
+class PluginSettingTab {
+  constructor(app, plugin) {
+    this.app = app;
+    this.plugin = plugin;
+  }
+}
 class SecretComponent {}
 class Setting {}
 class Component {
@@ -32,6 +53,7 @@ const obsidianMock = {
   ItemView,
   MarkdownView,
   MarkdownRenderer: { render: async () => {} },
+  Modal,
   Notice: class {},
   Plugin,
   PluginSettingTab,
@@ -47,7 +69,9 @@ const obsidianMock = {
   setIcon: () => {},
 };
 
-const entryPath = resolve("main.js");
+const entryPath = process.env.PLUGIN_BUNDLE_PATH
+  ? resolve(process.env.PLUGIN_BUNDLE_PATH)
+  : resolve("main.js");
 const compiledModule = new Module(entryPath);
 compiledModule.filename = entryPath;
 compiledModule.paths = Module._nodeModulePaths(process.cwd());
@@ -59,7 +83,10 @@ Module._load = (request, parent, isMain) =>
     : originalLoad(request, parent, isMain);
 
 try {
-  compiledModule._compile(readFileSync(entryPath, "utf8"), entryPath);
+  compiledModule._compile(
+    `const document = {};\n${readFileSync(entryPath, "utf8")}`,
+    entryPath,
+  );
 } finally {
   Module._load = originalLoad;
 }
@@ -71,9 +98,57 @@ const plugin = new AiReadingCompanionPlugin();
 plugin.testData = {
   aiBaseUrl: "https://api.kimi.com/coding/",
 };
-await plugin.loadSettings();
+plugin.app = {
+  workspace: { on: () => ({}) },
+};
+await plugin.onload();
 assert.equal(plugin.settings.aiProvider, "kimi");
 assert.equal(plugin.settings.internalLinkOpenMode, "tab");
+assert.equal(typeof registeredViewFactory, "function");
+
+const view = registeredViewFactory({ app: plugin.app });
+view.renderActiveSession = () => {};
+await view.startSession({
+  excerpt: "First selected passage",
+  sourceFile: "Reading/first.md",
+  sourceHeading: "First concept",
+  images: [],
+});
+view.messages.push({ role: "assistant", content: "First answer" });
+view.syncActiveSession();
+const firstSessionId = view.activeSession.id;
+await view.startSession({
+  excerpt: "Second selected passage",
+  sourceFile: "Reading/second.md",
+  sourceHeading: "Second concept",
+  images: [],
+});
+assert.equal(view.sessions.length, 2);
+assert.equal(view.getSessionTitle(view.activeSession), "Second concept");
+view.switchSession(firstSessionId);
+assert.equal(view.messages[0].content, "First answer");
+view.deleteSession(firstSessionId);
+assert.equal(view.sessions.length, 1);
+
+const selection = {
+  removeAllRanges: () => {},
+  addRange: () => {},
+};
+const answerMessage = {
+  content: "# Complete answer",
+  bodyEl: {
+    ownerDocument: {
+      getSelection: () => selection,
+      createRange: () => ({ selectNodeContents: () => {} }),
+    },
+  },
+  saveButton: {},
+  actionStatusEl: {},
+};
+view.selectWholeAnswer(answerMessage);
+assert.equal(answerMessage.selectedText, "# Complete answer");
+assert.equal(answerMessage.selectedAll, true);
+assert.equal(answerMessage.saveButton.disabled, false);
 
 const genericRequests = [];
 requestHandler = async (options) => {
