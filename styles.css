@@ -156,7 +156,7 @@
 
 .ai-agent-session-list {
   display: flex;
-  max-height: 10.5rem;
+  max-height: 12rem;
   padding: 0 0.65rem 0.65rem;
   flex-direction: column;
   gap: 0.42rem;
@@ -203,13 +203,39 @@
 }
 
 .ai-agent-session-title,
-.ai-agent-session-preview,
 .ai-agent-session-meta {
   display: block;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ai-agent-session-item-header {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.18rem;
+}
+
+.ai-agent-session-number {
+  color: var(--color-orange);
+  font-family: var(--font-monospace-theme);
+  font-size: var(--font-ui-smallest);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ai-agent-session-current {
+  padding: 0.05rem 0.3rem;
+  border: 1px solid color-mix(in srgb, var(--color-orange) 35%, transparent);
+  border-radius: 999px;
+  color: var(--color-orange);
+  background: color-mix(in srgb, var(--color-orange) 8%, transparent);
+  font-size: var(--font-ui-smallest);
+  line-height: 1.2;
 }
 
 .ai-agent-session-text {
@@ -225,9 +251,16 @@
 }
 
 .ai-agent-session-preview {
+  display: -webkit-box;
   margin-top: 0.12rem;
+  max-width: 100%;
+  overflow: hidden;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+  line-height: 1.35;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .ai-agent-session-meta {
@@ -933,11 +966,7 @@
 
 @container ai-agent-chat (max-width: 440px) {
   .ai-agent-session-list {
-    max-height: 8.5rem;
-  }
-
-  .ai-agent-session-preview {
-    display: none;
+    max-height: 10.5rem;
   }
 
   .ai-agent-session-select {

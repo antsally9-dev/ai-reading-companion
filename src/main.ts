@@ -1400,7 +1400,27 @@ class AiQuestionView extends ItemView {
     const turns = session.messages.filter(
       (message) => message.role === "assistant",
     ).length;
-    return `${moment(session.createdAt).format("HH:mm")} · ${turns} ${turns === 1 ? "turn" : "turns"}`;
+    return [
+      moment(session.createdAt).format("HH:mm"),
+      session.context.lineRange
+        ? `lines ${session.context.lineRange}`
+        : "",
+      `${turns} ${turns === 1 ? "turn" : "turns"}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  getSessionPreview(session) {
+    return String(session.context.excerpt || "")
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, "[image]")
+      .replace(
+        /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
+        (_match, target, label) => label || target,
+      )
+      .replace(/[*_`>#]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   renderSessionBrowser(contentEl) {
@@ -1463,16 +1483,26 @@ class AiQuestionView extends ItemView {
         attr: { type: "button" },
       });
       const itemText = selectButton.createSpan({ cls: "ai-agent-session-text" });
+      const itemHeader = itemText.createSpan({ cls: "ai-agent-session-item-header" });
+      itemHeader.createSpan({
+        cls: "ai-agent-session-number",
+        text: `Conversation ${session.id}`,
+      });
+      if (session === this.activeSession) {
+        itemHeader.createSpan({
+          cls: "ai-agent-session-current",
+          text: "Current",
+        });
+        selectButton.setAttr("aria-current", "true");
+      }
       itemText.createSpan({
         cls: "ai-agent-session-title",
         text: this.getSessionTitle(session),
       });
-      const preview = String(session.context.excerpt || "")
-        .replace(/\s+/g, " ")
-        .trim();
+      const preview = this.getSessionPreview(session);
       itemText.createSpan({
         cls: "ai-agent-session-preview",
-        text: preview.length > 72 ? `${preview.slice(0, 72)}…` : preview,
+        text: preview.length > 96 ? `${preview.slice(0, 96)}…` : preview,
       });
       session.listMetaEl = itemText.createSpan({
         cls: "ai-agent-session-meta",

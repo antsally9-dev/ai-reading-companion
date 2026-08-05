@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added conversation numbers, active-state labels, cleaned selection previews, and line ranges so sessions from the same heading remain distinguishable.
 - Fixed conversation-list overflow and text overlap in narrow sidebars.
 - Made rendered AI answers explicitly text-selectable inside Obsidian views.
 - Added a one-click action to select an entire answer for saving.
