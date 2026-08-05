@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a per-document companion-note destination under `Folder/Note/AI conversations.md` with a configurable filename.
+- Added the selected source passage to the default template as a collapsed native Obsidian callout.
+- Changed conversation-list titles to begin with the selected source text for faster switching.
 - Added conversation numbers, active-state labels, cleaned selection previews, and line ranges so sessions from the same heading remain distinguishable.
 - Fixed conversation-list overflow and text overlap in narrow sidebars.
 - Made rendered AI answers explicitly text-selectable inside Obsidian views.

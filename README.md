@@ -13,6 +13,8 @@ The conversation, reasoning output, search results, and unselected answer text a
 - Optional images from Obsidian embeds, Markdown images, local Vault files, or public URLs.
 - Kimi Coding web search and page fetch with inline citations and a source list.
 - Save confirmed excerpts to the source note or a configurable central note.
+- Optionally collect each source document's confirmed Q&A in `Folder/Note/AI conversations.md`.
+- Include the selected source passage in a native Obsidian callout that is collapsed by default.
 - Configurable destination heading and Markdown save template.
 - Pop-out or right-sidebar conversation view.
 - Configurable behavior for ordinary internal links.

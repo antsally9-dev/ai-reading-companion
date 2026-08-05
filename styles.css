@@ -202,7 +202,6 @@
   background: var(--background-modifier-hover);
 }
 
-.ai-agent-session-title,
 .ai-agent-session-meta {
   display: block;
   max-width: 100%;
@@ -246,18 +245,12 @@
 }
 
 .ai-agent-session-title {
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-semibold);
-}
-
-.ai-agent-session-preview {
   display: -webkit-box;
-  margin-top: 0.12rem;
   max-width: 100%;
   overflow: hidden;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  line-height: 1.35;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  line-height: 1.4;
   white-space: normal;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;

@@ -266,12 +266,23 @@ const sourceFile = {
   extension: "md",
   basename: "topic",
 };
-let noteContent = "# Topic\n\nOriginal note.";
+const vaultEntries = new Map([[sourceFile.path, sourceFile]]);
+const noteContents = new Map([[sourceFile.path, "# Topic\n\nOriginal note."]]);
 plugin.app = {
   vault: {
-    getAbstractFileByPath: () => sourceFile,
-    process: async (_file, update) => {
-      noteContent = update(noteContent);
+    getAbstractFileByPath: (path) => vaultEntries.get(path) || null,
+    createFolder: async (path) => {
+      vaultEntries.set(path, { path });
+    },
+    create: async (path, content) => {
+      const basename = path.split("/").pop().replace(/\.md$/i, "");
+      const file = { path, extension: "md", basename };
+      vaultEntries.set(path, file);
+      noteContents.set(path, content);
+      return file;
+    },
+    process: async (file, update) => {
+      noteContents.set(file.path, update(noteContents.get(file.path) || ""));
     },
   },
 };
@@ -287,11 +298,49 @@ await plugin.saveConfirmedAiExcerpt(
     sourceFile: sourceFile.path,
     sourceHeading: "Definition",
     lineRange: "4-6",
+    excerpt: "The selected source passage.",
   },
   "What does it mean?",
   "My confirmed excerpt",
   false,
 );
+const noteContent = noteContents.get(sourceFile.path);
 assert.match(noteContent, /## AI excerpts/);
 assert.match(noteContent, /> My confirmed excerpt/);
 assert.doesNotMatch(noteContent, /Grounded answer/);
+
+plugin.settings = {
+  saveDestinationMode: "companion",
+  companionNoteName: "AI conversations.md",
+  targetSectionHeading: "AI excerpts",
+  autoCreateTargetSection: true,
+  saveTemplate: [
+    "### {{sourceLabel}}",
+    "",
+    "> [!quote]- Selected source passage",
+    "{{sourceQuote}}",
+    "",
+    "> [!question] Question",
+    "{{questionQuote}}",
+    "",
+    "> [!quote] Confirmed AI excerpt",
+    "{{answerQuote}}",
+  ].join("\n"),
+};
+const companionContext = {
+  sourceFile: sourceFile.path,
+  sourceHeading: "Definition",
+  lineRange: "4-6",
+  excerpt: "The selected source passage.",
+};
+const companionFile = await plugin.saveConfirmedAiExcerpt(
+  companionContext,
+  "Why does this matter?",
+  "Companion answer",
+  false,
+);
+assert.equal(companionFile.path, "Reading/topic/AI conversations.md");
+const companionContent = noteContents.get(companionFile.path);
+assert.match(companionContent, /> \[!quote\]- Selected source passage/);
+assert.match(companionContent, /> The selected source passage\./);
+assert.match(companionContent, /> Companion answer/);

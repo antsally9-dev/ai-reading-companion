@@ -23,10 +23,24 @@ const MAX_IMAGE_EDGE = 2000;
 const MAX_WEB_TOOL_ROUNDS = 6;
 const MAX_SEARCH_RESULTS = 8;
 const MAX_FETCH_CHARACTERS = 24000;
+const LEGACY_DEFAULT_SAVE_TEMPLATE = [
+  "### {{timestamp}} · {{sourceLabel}}",
+  "",
+  "Source: {{sourceLink}} · lines {{lineRange}}",
+  "",
+  "> [!question] Question",
+  "{{questionQuote}}",
+  "",
+  "> [!quote] Confirmed AI excerpt",
+  "{{answerQuote}}",
+].join("\n");
 const DEFAULT_SAVE_TEMPLATE = [
   "### {{timestamp}} · {{sourceLabel}}",
   "",
   "Source: {{sourceLink}} · lines {{lineRange}}",
+  "",
+  "> [!quote]- Selected source passage",
+  "{{sourceQuote}}",
   "",
   "> [!question] Question",
   "{{questionQuote}}",
@@ -74,6 +88,7 @@ const DEFAULT_SETTINGS = {
     "You are a careful reading tutor. Answer using the selected passage and the user's question. Clearly distinguish source facts, explanations, and inferences. Reply in the language used by the user and help them form their own understanding.",
   saveDestinationMode: "source",
   centralNotePath: "AI Learning/AI excerpts.md",
+  companionNoteName: "AI conversations.md",
   targetSectionHeading: "AI excerpts",
   autoCreateTargetSection: true,
   saveTemplate: DEFAULT_SAVE_TEMPLATE,
@@ -133,6 +148,9 @@ export default class AiReadingCompanionPlugin extends Plugin {
       this.settings.aiProvider = this.inferProviderFromBaseUrl(
         this.settings.aiBaseUrl,
       );
+    }
+    if (loaded.saveTemplate === LEGACY_DEFAULT_SAVE_TEMPLATE) {
+      this.settings.saveTemplate = DEFAULT_SAVE_TEMPLATE;
     }
   }
 
@@ -1019,13 +1037,50 @@ export default class AiReadingCompanionPlugin extends Plugin {
   }
 
   async getSaveTargetFile(context) {
-    if (this.settings.saveDestinationMode !== "central") {
-      const sourceFile: any = this.app.vault.getAbstractFileByPath(
-        normalizePath(String(context.sourceFile || "")),
-      );
-      if (!sourceFile || sourceFile.extension !== "md") {
-        throw new Error("The source Markdown note could not be found.");
+    const sourceFile: any = this.app.vault.getAbstractFileByPath(
+      normalizePath(String(context.sourceFile || "")),
+    );
+    if (!sourceFile || sourceFile.extension !== "md") {
+      throw new Error("The source Markdown note could not be found.");
+    }
+
+    const destinationMode = this.settings.saveDestinationMode || "source";
+    if (destinationMode === "source") {
+      return sourceFile;
+    }
+
+    if (destinationMode === "companion") {
+      let fileName = String(
+        this.settings.companionNoteName || "AI conversations.md",
+      )
+        .trim()
+        .replace(/[\\/:*?"<>|]/g, "-");
+      if (!fileName) {
+        fileName = "AI conversations.md";
       }
+      if (!/\.md$/i.test(fileName)) {
+        fileName = `${fileName}.md`;
+      }
+      const sourcePath = normalizePath(sourceFile.path);
+      const separatorIndex = sourcePath.lastIndexOf("/");
+      const parentPath =
+        separatorIndex >= 0 ? sourcePath.slice(0, separatorIndex) : "";
+      const companionFolder = [parentPath, sourceFile.basename]
+        .filter(Boolean)
+        .join("/");
+      const notePath = normalizePath(`${companionFolder}/${fileName}`);
+      let targetFile: any = this.app.vault.getAbstractFileByPath(notePath);
+      if (!targetFile) {
+        await this.ensureParentFolder(notePath);
+        targetFile = await this.app.vault.create(notePath, "");
+      }
+      if (!targetFile || targetFile.extension !== "md") {
+        throw new Error(`The document companion is not a Markdown file: ${notePath}`);
+      }
+      return targetFile;
+    }
+
+    if (destinationMode !== "central") {
       return sourceFile;
     }
 
@@ -1084,8 +1139,10 @@ export default class AiReadingCompanionPlugin extends Plugin {
       sourceLabel,
       sourceLink: `[[${sourceTarget}${sourceAnchor}|${sourceLabel}]]`,
       lineRange: context.lineRange || "",
+      sourceExcerpt: String(context.excerpt || "").trim(),
       question: normalizedQuestion,
       answer: confirmedAnswer,
+      sourceQuote: this.makeMarkdownQuote(context.excerpt || ""),
       questionQuote: this.makeMarkdownQuote(normalizedQuestion),
       answerQuote: this.makeMarkdownQuote(confirmedAnswer),
     };
@@ -1401,11 +1458,12 @@ class AiQuestionView extends ItemView {
       (message) => message.role === "assistant",
     ).length;
     return [
-      moment(session.createdAt).format("HH:mm"),
       session.context.lineRange
         ? `lines ${session.context.lineRange}`
         : "",
+      moment(session.createdAt).format("HH:mm"),
       `${turns} ${turns === 1 ? "turn" : "turns"}`,
+      this.getSessionTitle(session),
     ]
       .filter(Boolean)
       .join(" · ");
@@ -1495,15 +1553,12 @@ class AiQuestionView extends ItemView {
         });
         selectButton.setAttr("aria-current", "true");
       }
-      itemText.createSpan({
-        cls: "ai-agent-session-title",
-        text: this.getSessionTitle(session),
-      });
       const preview = this.getSessionPreview(session);
       itemText.createSpan({
-        cls: "ai-agent-session-preview",
-        text: preview.length > 96 ? `${preview.slice(0, 96)}…` : preview,
+        cls: "ai-agent-session-title",
+        text: preview.length > 58 ? `${preview.slice(0, 58)}…` : preview,
       });
+      selectButton.setAttr("title", preview);
       session.listMetaEl = itemText.createSpan({
         cls: "ai-agent-session-meta",
         text: this.getSessionMeta(session),
@@ -1514,7 +1569,7 @@ class AiQuestionView extends ItemView {
         cls: "ai-agent-session-delete clickable-icon",
         attr: {
           type: "button",
-          "aria-label": `Delete conversation: ${this.getSessionTitle(session)}`,
+          "aria-label": `Delete conversation: ${preview.slice(0, 48)}`,
           title: "Delete conversation",
         },
       });
@@ -2309,11 +2364,12 @@ class AiReadingCompanionSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Save confirmed excerpts to")
       .setDesc(
-        "Write back to the source note by default, or collect all confirmed excerpts in one note.",
+        "Write back to the source note, create a companion note for each source document, or collect everything centrally.",
       )
       .addDropdown((dropdown) => {
         dropdown
           .addOption("source", "Source note (default)")
+          .addOption("companion", "Document companion note")
           .addOption("central", "Central note")
           .setValue(this.plugin.settings.saveDestinationMode || "source")
           .onChange(async (value) => {
@@ -2322,6 +2378,24 @@ class AiReadingCompanionSettingTab extends PluginSettingTab {
             this.renderSettings();
           });
       });
+
+    if (this.plugin.settings.saveDestinationMode === "companion") {
+      new Setting(containerEl)
+        .setName("Companion note filename")
+        .setDesc(
+          "For Folder/Note.md, the plugin saves to Folder/Note/<filename>. All confirmed Q&A from that source document goes into the same note.",
+        )
+        .addText((text) => {
+          text
+            .setPlaceholder("AI conversations.md")
+            .setValue(this.plugin.settings.companionNoteName || "")
+            .onChange(async (value) => {
+              this.plugin.settings.companionNoteName = value.trim();
+              await this.plugin.saveSettings();
+            });
+          text.inputEl.addClass("ai-agent-setting-wide");
+        });
+    }
 
     if (this.plugin.settings.saveDestinationMode === "central") {
       new Setting(containerEl)
@@ -2497,7 +2571,7 @@ class AiReadingCompanionSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("Save template")
       .setDesc(
-        "Available variables: {{timestamp}}, {{date}}, {{sourceLink}}, {{sourceFile}}, {{sourceHeading}}, {{sourceLabel}}, {{lineRange}}, {{question}}, {{answer}}, {{questionQuote}}, {{answerQuote}}.",
+        "Available variables: {{timestamp}}, {{date}}, {{sourceLink}}, {{sourceFile}}, {{sourceHeading}}, {{sourceLabel}}, {{lineRange}}, {{sourceExcerpt}}, {{sourceQuote}}, {{question}}, {{answer}}, {{questionQuote}}, {{answerQuote}}.",
       )
       .addTextArea((text) => {
         text
