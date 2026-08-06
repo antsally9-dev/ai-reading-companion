@@ -46,6 +46,7 @@ class Setting {}
 class Component {
   load() {}
   unload() {}
+  registerDomEvent() {}
 }
 
 const obsidianMock = {
@@ -115,6 +116,8 @@ await view.startSession({
   images: [],
 });
 view.messages.push({ role: "assistant", content: "First answer" });
+view.addTextToExcerptDraft("First retained excerpt");
+view.addTextToExcerptDraft("Second retained excerpt");
 view.syncActiveSession();
 const firstSessionId = view.activeSession.id;
 await view.startSession({
@@ -127,28 +130,13 @@ assert.equal(view.sessions.length, 2);
 assert.equal(view.getSessionTitle(view.activeSession), "Second concept");
 view.switchSession(firstSessionId);
 assert.equal(view.messages[0].content, "First answer");
+assert.equal(
+  view.excerptDraft,
+  "First retained excerpt\n\nSecond retained excerpt",
+);
+assert.equal(view.excerptCount, 2);
 view.deleteSession(firstSessionId);
 assert.equal(view.sessions.length, 1);
-
-const selection = {
-  removeAllRanges: () => {},
-  addRange: () => {},
-};
-const answerMessage = {
-  content: "# Complete answer",
-  bodyEl: {
-    ownerDocument: {
-      getSelection: () => selection,
-      createRange: () => ({ selectNodeContents: () => {} }),
-    },
-  },
-  saveButton: {},
-  actionStatusEl: {},
-};
-view.selectWholeAnswer(answerMessage);
-assert.equal(answerMessage.selectedText, "# Complete answer");
-assert.equal(answerMessage.selectedAll, true);
-assert.equal(answerMessage.saveButton.disabled, false);
 
 const genericRequests = [];
 requestHandler = async (options) => {

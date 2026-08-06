@@ -1269,6 +1269,11 @@ class AiQuestionView extends ItemView {
         this.plugin.settings.aiAutoSelectImages === true &&
         (image.size === null || image.size <= MAX_IMAGE_BYTES),
     }));
+    this.excerptDraft = "";
+    this.excerptCount = 0;
+    this.draftSavedFile = null;
+    this.selectedMessage = null;
+    this.selectionToolbarEl = null;
   }
 
   createSession(context) {
@@ -1292,6 +1297,9 @@ class AiQuestionView extends ItemView {
           (image.size === null || image.size <= MAX_IMAGE_BYTES),
       })),
       draft: "",
+      excerptDraft: "",
+      excerptCount: 0,
+      draftSavedFile: null,
     };
   }
 
@@ -1308,6 +1316,12 @@ class AiQuestionView extends ItemView {
     this.activeSession.draft = this.questionEl
       ? this.questionEl.value
       : this.activeSession.draft || "";
+    this.excerptDraft = this.excerptEditorEl
+      ? this.excerptEditorEl.value
+      : this.excerptDraft || "";
+    this.activeSession.excerptDraft = this.excerptDraft;
+    this.activeSession.excerptCount = this.excerptCount;
+    this.activeSession.draftSavedFile = this.draftSavedFile;
   }
 
   activateSession(session) {
@@ -1322,6 +1336,10 @@ class AiQuestionView extends ItemView {
     this.webSearchEnabled = session.webSearchEnabled;
     this.imageSelections = session.imageSelections;
     this.imageCheckboxes = [];
+    this.excerptDraft = session.excerptDraft || "";
+    this.excerptCount = session.excerptCount || 0;
+    this.draftSavedFile = session.draftSavedFile || null;
+    this.selectedMessage = null;
   }
 
   renderWaitingState() {
@@ -1358,6 +1376,7 @@ class AiQuestionView extends ItemView {
     const shell = this.contentEl.createDiv({ cls: "ai-agent-chat-shell" });
     this.renderContextPanel(shell);
     this.renderChatPanel(shell);
+    this.renderSelectionToolbar(this.contentEl);
     this.questionEl.value = this.activeSession.draft || "";
     this.resizeComposer();
     this.updateComposerState();
@@ -1621,6 +1640,8 @@ class AiQuestionView extends ItemView {
       text: `${this.context.sourceFile} · lines ${this.context.lineRange}`,
     });
 
+    this.renderExcerptWorkspace(aside);
+
     const sourceDetails = aside.createEl("details", {
       cls: "ai-agent-context-details",
     });
@@ -1647,6 +1668,151 @@ class AiQuestionView extends ItemView {
     privacy.createSpan({
       text: "Only checked images are sent. The full conversation remains in this view.",
     });
+  }
+
+  renderExcerptWorkspace(containerEl) {
+    const workspace = containerEl.createEl("section", {
+      cls: "ai-agent-excerpt-workspace",
+      attr: { "aria-label": "Excerpt draft" },
+    });
+    const header = workspace.createDiv({ cls: "ai-agent-excerpt-header" });
+    const heading = header.createDiv();
+    heading.createEl("h4", { text: "Excerpt draft" });
+    heading.createDiv({
+      cls: "ai-agent-excerpt-hint",
+      text: "Collect passages from multiple answers, edit them here, then save once.",
+    });
+    this.excerptCountEl = header.createSpan({ cls: "ai-agent-excerpt-count" });
+
+    this.excerptEditorEl = workspace.createEl("textarea", {
+      cls: "ai-agent-excerpt-editor",
+      attr: {
+        rows: "7",
+        placeholder: "Select text in an AI answer and choose add to draft…",
+        "aria-label": "Edit collected AI excerpts",
+      },
+    });
+    this.excerptEditorEl.value = this.excerptDraft || "";
+    this.excerptEditorEl.addEventListener("input", () => {
+      this.excerptDraft = this.excerptEditorEl.value;
+      this.draftSavedFile = null;
+      this.updateExcerptWorkspace("Draft changed · not saved");
+      this.syncActiveSession();
+    });
+
+    const footer = workspace.createDiv({ cls: "ai-agent-excerpt-footer" });
+    const clearButton = footer.createEl("button", {
+      cls: "ai-agent-excerpt-button",
+      attr: { type: "button" },
+    });
+    const clearIcon = clearButton.createSpan();
+    setIcon(clearIcon, "eraser");
+    clearButton.createSpan({ text: "Clear" });
+    clearButton.addEventListener("click", () => this.clearExcerptDraft());
+
+    this.excerptOpenButton = footer.createEl("button", {
+      cls: "ai-agent-excerpt-button",
+      attr: { type: "button" },
+    });
+    const openIcon = this.excerptOpenButton.createSpan();
+    setIcon(openIcon, "external-link");
+    this.excerptOpenButton.createSpan({ text: "Open note" });
+    this.excerptOpenButton.addEventListener("click", () => {
+      if (this.draftSavedFile) {
+        void this.plugin.openBesideSource(this.draftSavedFile);
+      }
+    });
+
+    this.excerptSaveButton = footer.createEl("button", {
+      cls: "mod-cta ai-agent-excerpt-save",
+      attr: { type: "button" },
+    });
+    const saveIcon = this.excerptSaveButton.createSpan();
+    setIcon(saveIcon, "notebook-pen");
+    this.excerptSaveButton.createSpan({ text: "Save draft" });
+    this.excerptSaveButton.addEventListener("click", () => {
+      void this.saveExcerptDraft();
+    });
+
+    this.excerptStatusEl = workspace.createDiv({
+      cls: "ai-agent-excerpt-status",
+    });
+    this.updateExcerptWorkspace(
+      this.draftSavedFile
+        ? `Saved to: ${this.draftSavedFile.basename}`
+        : "Nothing is written to the Vault until you save this draft.",
+    );
+  }
+
+  updateExcerptWorkspace(statusText = "") {
+    const draft = this.excerptEditorEl
+      ? this.excerptEditorEl.value.trim()
+      : String(this.excerptDraft || "").trim();
+    if (this.excerptCountEl) {
+      this.excerptCountEl.textContent = `${this.excerptCount} excerpts · ${draft.length} characters`;
+    }
+    if (this.excerptSaveButton) {
+      this.excerptSaveButton.disabled = !draft;
+    }
+    if (this.excerptOpenButton) {
+      this.excerptOpenButton.toggle(Boolean(this.draftSavedFile));
+    }
+    if (this.excerptStatusEl && statusText) {
+      this.excerptStatusEl.textContent = statusText;
+    }
+  }
+
+  clearExcerptDraft() {
+    const draft = this.excerptEditorEl && this.excerptEditorEl.value.trim();
+    if (draft && !this.contentEl.win.confirm("Clear the unsaved excerpt draft?")) {
+      return;
+    }
+    this.excerptDraft = "";
+    this.excerptCount = 0;
+    this.draftSavedFile = null;
+    if (this.excerptEditorEl) {
+      this.excerptEditorEl.value = "";
+    }
+    this.updateExcerptWorkspace("Draft cleared");
+    this.syncActiveSession();
+  }
+
+  getConversationQuestionSummary() {
+    return this.messages
+      .filter((message) => message.role === "user")
+      .map((message) => String(message.content || "").trim())
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  async saveExcerptDraft() {
+    const draft = this.excerptEditorEl
+      ? this.excerptEditorEl.value.trim()
+      : String(this.excerptDraft || "").trim();
+    if (!draft) {
+      new Notice("Add at least one excerpt to the draft first.");
+      return;
+    }
+
+    this.excerptSaveButton.disabled = true;
+    this.excerptStatusEl.textContent = "Saving draft…";
+    try {
+      const targetFile = await this.plugin.saveConfirmedAiExcerpt(
+        this.context,
+        this.getConversationQuestionSummary(),
+        draft,
+        false,
+      );
+      this.excerptDraft = draft;
+      this.draftSavedFile = targetFile;
+      this.updateExcerptWorkspace(`Saved to: ${targetFile.basename}`);
+      this.syncActiveSession();
+      new Notice("The edited excerpt draft was saved.");
+    } catch (error) {
+      this.excerptSaveButton.disabled = false;
+      this.excerptStatusEl.textContent = "Save failed. The draft is still here.";
+      new Notice(`Save failed: ${error.message || error}`, 8000);
+    }
   }
 
   renderCompactImagePicker(containerEl) {
@@ -1735,7 +1901,7 @@ class AiQuestionView extends ItemView {
     topbarTitle.createEl("h3", { text: "Conversation" });
     topbarTitle.createDiv({
       cls: "ai-agent-conversation-hint",
-      text: "Select text in any AI answer to append it to your notes",
+      text: "Select text in any AI answer, then add it to the editable draft",
     });
     this.turnCounterEl = topbar.createDiv({
       cls: "ai-agent-turn-counter",
@@ -1989,51 +2155,19 @@ class AiQuestionView extends ItemView {
 
   renderAssistantActions(message, card) {
     const actions = card.createDiv({ cls: "ai-agent-message-actions" });
-    const selectAllButton = actions.createEl("button", {
+    const addAllButton = actions.createEl("button", {
       cls: "ai-agent-message-action",
     });
-    const selectAllIcon = selectAllButton.createSpan();
-    setIcon(selectAllIcon, "text-select");
-    selectAllButton.createSpan({ text: "Select entire answer" });
-    selectAllButton.addEventListener("click", () => {
-      this.selectWholeAnswer(message);
-    });
-
-    const saveButton = actions.createEl("button", {
-      cls: "ai-agent-message-action",
-    });
-    const saveIcon = saveButton.createSpan();
-    setIcon(saveIcon, "notebook-pen");
-    saveButton.createSpan({ text: "Save selected text" });
-    message.saveButton = saveButton;
-    saveButton.disabled = !message.selectedText;
-    saveButton.addEventListener("click", () => {
-      void this.saveAssistantSelection(message);
-    });
-
-    const openButton = actions.createEl("button", {
-      cls: "ai-agent-message-action",
-    });
-    const openIcon = openButton.createSpan();
-    setIcon(openIcon, "external-link");
-    openButton.createSpan({ text: "Open saved note" });
-    if (!message.savedFile) {
-      openButton.hide();
-    }
-    message.openButton = openButton;
-    openButton.addEventListener("click", () => {
-      if (message.savedFile) {
-        void this.plugin.openBesideSource(message.savedFile);
-      }
+    const addAllIcon = addAllButton.createSpan();
+    setIcon(addAllIcon, "list-plus");
+    addAllButton.createSpan({ text: "Add entire answer to draft" });
+    addAllButton.addEventListener("click", () => {
+      this.addTextToExcerptDraft(message.content, message);
     });
 
     message.actionStatusEl = actions.createSpan({
       cls: "ai-agent-message-action-status",
-      text: message.savedFile
-        ? `Appended to: ${message.savedFile.basename}`
-        : message.selectedText
-          ? `Selected ${message.selectedText.length} characters`
-          : "Select answer text to save",
+      text: "Select part of this answer to reveal Add to draft",
     });
   }
 
@@ -2098,84 +2232,144 @@ class AiQuestionView extends ItemView {
   }
 
   captureMessageSelection(message) {
-    const selectedText = this.getSelectionWithin(message.bodyEl);
-    if (!selectedText) {
+    const selectionInfo = this.getSelectionInfoWithin(message.bodyEl);
+    if (!selectionInfo) {
       return;
     }
-    message.selectedText = selectedText;
+    message.selectedText = selectionInfo.text;
     message.selectedAll = false;
-    message.saveButton.disabled = false;
-    message.actionStatusEl.textContent = `Selected ${selectedText.length} characters`;
+    message.actionStatusEl.textContent = `Selected ${selectionInfo.text.length} characters`;
+    this.showSelectionToolbar(message, selectionInfo.rect);
   }
 
-  selectWholeAnswer(message) {
-    const selectedText = String(message.content || "").trim();
-    if (!selectedText || !message.bodyEl) {
+  renderSelectionToolbar(containerEl) {
+    const toolbar = containerEl.createDiv({
+      cls: "ai-agent-selection-toolbar is-hidden",
+      attr: { role: "toolbar", "aria-label": "Selected answer actions" },
+    });
+    const addButton = toolbar.createEl("button", {
+      cls: "ai-agent-selection-add",
+      attr: { type: "button" },
+    });
+    const icon = addButton.createSpan();
+    setIcon(icon, "list-plus");
+    addButton.createSpan({ text: "Add to draft" });
+    addButton.addEventListener("mousedown", (event) => event.preventDefault());
+    addButton.addEventListener("click", () => {
+      if (this.selectedMessage && this.selectedMessage.selectedText) {
+        this.addTextToExcerptDraft(
+          this.selectedMessage.selectedText,
+          this.selectedMessage,
+        );
+      }
+    });
+    this.selectionToolbarEl = toolbar;
+
+    const doc = containerEl.doc || containerEl.ownerDocument;
+    this.renderComponent.registerDomEvent(doc, "mousedown", (event) => {
+      const target = event.target;
+      if (
+        !this.selectionToolbarEl ||
+        this.selectionToolbarEl.contains(target) ||
+        (target && target.closest && target.closest(".ai-agent-message-body"))
+      ) {
+        return;
+      }
+      this.hideSelectionToolbar();
+    });
+  }
+
+  showSelectionToolbar(message, rect) {
+    if (!this.selectionToolbarEl || !rect) {
       return;
     }
-    message.selectedText = selectedText;
-    message.selectedAll = true;
-    message.saveButton.disabled = false;
-    message.actionStatusEl.textContent = `Selected the entire answer · ${selectedText.length} characters`;
+    this.selectedMessage = message;
+    const win = this.contentEl.win;
+    const halfWidth = 84;
+    const left = Math.min(
+      Math.max(rect.left + rect.width / 2, halfWidth + 8),
+      win.innerWidth - halfWidth - 8,
+    );
+    const top = Math.max(rect.top, 52);
+    this.selectionToolbarEl.style.left = `${left}px`;
+    this.selectionToolbarEl.style.top = `${top}px`;
+    this.selectionToolbarEl.removeClass("is-hidden");
+  }
 
-    const doc = message.bodyEl.doc || message.bodyEl.ownerDocument;
-    const selection = doc && doc.getSelection ? doc.getSelection() : null;
-    if (selection && doc.createRange) {
-      const range = doc.createRange();
-      range.selectNodeContents(message.bodyEl);
-      selection.removeAllRanges();
-      selection.addRange(range);
+  hideSelectionToolbar() {
+    if (this.selectionToolbarEl) {
+      this.selectionToolbarEl.addClass("is-hidden");
     }
+    this.selectedMessage = null;
   }
 
   getSelectionWithin(containerEl) {
+    const selectionInfo = this.getSelectionInfoWithin(containerEl);
+    return selectionInfo ? selectionInfo.text : "";
+  }
+
+  getSelectionInfoWithin(containerEl) {
     const doc = containerEl.doc || containerEl.ownerDocument;
     const selection = doc && doc.getSelection ? doc.getSelection() : null;
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-      return "";
+      return null;
     }
     const range = selection.getRangeAt(0);
     const common = range.commonAncestorContainer;
     if (!containerEl.contains(common)) {
-      return "";
+      return null;
     }
-    return selection.toString().trim();
+    const text = selection.toString().trim();
+    if (!text) {
+      return null;
+    }
+    const clientRects = range.getClientRects ? Array.from(range.getClientRects()) : [];
+    const rect = clientRects.length
+      ? clientRects[clientRects.length - 1]
+      : range.getBoundingClientRect();
+    return { text, rect };
   }
 
-  async saveAssistantSelection(message) {
-    const selectedText = message.selectedAll
-      ? message.selectedText
-      : this.getSelectionWithin(message.bodyEl) || message.selectedText;
+  addTextToExcerptDraft(text, message = null) {
+    const selectedText = String(text || "").trim();
     if (!selectedText) {
-      new Notice("Select the text you want to keep in this AI answer first.");
+      new Notice("Select answer text first.");
       return;
     }
-
-    message.saveButton.disabled = true;
-    message.actionStatusEl.textContent = "Appending to note…";
-    try {
-      const targetFile = await this.plugin.saveConfirmedAiExcerpt(
-        this.context,
-        message.question,
-        selectedText,
-        false,
+    const currentDraft = this.excerptEditorEl
+      ? this.excerptEditorEl.value.trim()
+      : String(this.excerptDraft || "").trim();
+    this.excerptDraft = currentDraft
+      ? `${currentDraft}\n\n${selectedText}`
+      : selectedText;
+    this.excerptCount += 1;
+    this.draftSavedFile = null;
+    if (this.excerptEditorEl) {
+      this.excerptEditorEl.value = this.excerptDraft;
+      this.excerptEditorEl.scrollTop = this.excerptEditorEl.scrollHeight;
+      this.excerptEditorEl.addClass("is-updated");
+      this.contentEl.win.setTimeout(
+        () => this.excerptEditorEl && this.excerptEditorEl.removeClass("is-updated"),
+        650,
       );
-      message.savedFile = targetFile;
+    }
+    if (message) {
       message.selectedText = "";
       message.selectedAll = false;
-      message.saveButton.disabled = true;
-      message.openButton.show();
-      message.actionStatusEl.textContent = `Appended to: ${targetFile.basename}`;
+      if (message.actionStatusEl) {
+        message.actionStatusEl.textContent = `Added to draft · excerpt ${this.excerptCount}`;
+      }
+    }
+    this.updateExcerptWorkspace(`Added excerpt ${this.excerptCount} · edit before saving`);
+    this.syncActiveSession();
+    this.hideSelectionToolbar();
+
+    if (message && message.bodyEl) {
       const doc = message.bodyEl.doc || message.bodyEl.ownerDocument;
       const selection = doc && doc.getSelection ? doc.getSelection() : null;
       if (selection) {
         selection.removeAllRanges();
       }
-      new Notice("The selected text was appended. The rest of the conversation remains unsaved.");
-    } catch (error) {
-      message.saveButton.disabled = false;
-      message.actionStatusEl.textContent = "Save failed. You can retry.";
-      new Notice(`Save failed: ${error.message || error}`, 8000);
     }
   }
 

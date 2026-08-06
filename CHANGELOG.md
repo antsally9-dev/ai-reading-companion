@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added an editable per-conversation excerpt draft: select text in any AI answer, use the contextual action, collect multiple passages, then save once.
+- Fixed Obsidian's default button height collapsing conversation previews so the selected source text is now always visible in the conversation list.
 - Replaced hover-only source previews with an always-visible vertical conversation timeline.
 - Added a per-document companion-note destination under `Folder/Note/AI conversations.md` with a configurable filename.
 - Added the selected source passage to the default template as a collapsed native Obsidian callout.

@@ -1,6 +1,6 @@
 # AI Reading Companion
 
-AI Reading Companion lets you select text in any Obsidian Markdown note, discuss it with an OpenAI-compatible model, and save only the part of an answer that you explicitly select and confirm.
+AI Reading Companion lets you select text in any Obsidian Markdown note, discuss it with an OpenAI-compatible model, collect answer excerpts in an editable draft, and save only the draft you confirm.
 
 The conversation, reasoning output, search results, and unselected answer text are not written to your Vault automatically.
 
@@ -8,7 +8,8 @@ The conversation, reasoning output, search results, and unselected answer text a
 
 - Multi-turn chat grounded in the selected passage.
 - An in-memory conversation list that keeps separate selections available until the view or Obsidian closes.
-- Select any part of an answer, select an entire answer with one click, and delete one or all temporary conversations.
+- Select any part of an answer to reveal a contextual **Add to draft** action, or add an entire answer with one click.
+- Collect passages across multiple turns in a per-conversation editable draft, then save them together.
 - OpenAI, Kimi Coding, and custom OpenAI-compatible provider presets.
 - Optional images from Obsidian embeds, Markdown images, local Vault files, or public URLs.
 - Kimi Coding web search and page fetch with inline citations and a source list.
@@ -24,8 +25,8 @@ The conversation, reasoning output, search results, and unselected answer text a
 1. Select text in any Markdown note.
 2. Right-click and choose **Ask AI about selected text**, or run the command from the command palette.
 3. Continue the conversation in the pop-out or sidebar view.
-4. Select the exact part of an assistant answer that you want to keep.
-5. Choose **Save selected text**.
+4. Select the exact part of an assistant answer that you want to keep, then choose **Add to draft** beside the selection. Repeat across any number of turns.
+5. Edit the collected passages in the left-side draft and choose **Save draft**.
 
 By default, the excerpt is appended to the source note under:
 
@@ -56,7 +57,7 @@ The default template records the time, source note, heading, line range, questio
 
 When you send a question, the plugin sends the selected passage, your question, the current conversation history, the configured system prompt, and any images you explicitly selected to the configured API endpoint.
 
-When compatible web search is enabled, the model may search the web and fetch a limited number of relevant pages. Only answer text that you select and confirm is saved to the Vault.
+When compatible web search is enabled, the model may search the web and fetch a limited number of relevant pages. Selected answer text first stays in the temporary editable draft; only the draft you explicitly save is written to the Vault.
 
 The plugin contains no telemetry, advertising, or background analytics. Changing the custom API base URL causes the selected Secret to be used with that host, so only configure providers you trust.
 
