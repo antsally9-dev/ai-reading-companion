@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added image-only and mixed text-plus-image context-menu entry points; images explicitly included in the selection now start checked.
 - Added an editable per-conversation excerpt draft: select text in any AI answer, use the contextual action, collect multiple passages, then save once.
 - Fixed Obsidian's default button height collapsing conversation previews so the selected source text is now always visible in the conversation list.
 - Replaced hover-only source previews with an always-visible vertical conversation timeline.

@@ -101,6 +101,17 @@ plugin.testData = {
 };
 plugin.app = {
   workspace: { on: () => ({}) },
+  metadataCache: {
+    getFirstLinkpathDest: (target) =>
+      target === "assets/chart.png"
+        ? {
+            path: "Reading/assets/chart.png",
+            name: "chart.png",
+            extension: "png",
+            stat: { size: 2048 },
+          }
+        : null,
+  },
 };
 await plugin.onload();
 assert.equal(plugin.settings.aiProvider, "kimi");
@@ -109,6 +120,33 @@ assert.equal(typeof registeredViewFactory, "function");
 
 const view = registeredViewFactory({ app: plugin.app });
 view.renderActiveSession = () => {};
+const imageInfo = { file: { path: "Reading/image-note.md" } };
+const imageOnlyEditor = {
+  somethingSelected: () => false,
+  getSelection: () => "",
+  getCursor: () => ({ line: 4, ch: 0 }),
+  getLine: (line) =>
+    line === 4 ? "![[assets/chart.png]]" : line === 2 ? "## Charts" : "",
+};
+assert.equal(plugin.canUseSelection(imageOnlyEditor, imageInfo), true);
+const imageOnlyContext = plugin.getSelectionContext(imageOnlyEditor, imageInfo);
+assert.equal(imageOnlyContext.excerpt, "![[assets/chart.png]]");
+assert.equal(imageOnlyContext.images.length, 1);
+assert.equal(imageOnlyContext.images[0].explicitlySelected, true);
+assert.equal(view.createSession(imageOnlyContext).imageSelections[0].selected, true);
+
+const mixedEditor = {
+  somethingSelected: () => true,
+  getSelection: () => "Search summary\n\n![[assets/chart.png]]",
+  getCursor: (side) =>
+    side === "from" ? { line: 2, ch: 0 } : { line: 4, ch: 22 },
+  getLine: (line) => (line === 2 ? "## Charts" : ""),
+};
+const mixedContext = plugin.getSelectionContext(mixedEditor, imageInfo);
+assert.match(mixedContext.excerpt, /Search summary/);
+assert.equal(mixedContext.images.length, 1);
+assert.equal(mixedContext.images[0].explicitlySelected, true);
+
 await view.startSession({
   excerpt: "First selected passage",
   sourceFile: "Reading/first.md",

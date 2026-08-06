@@ -121,7 +121,7 @@ export default class AiReadingCompanionPlugin extends Plugin {
 
         menu.addItem((item) => {
           item
-            .setTitle("Ask AI about selected text")
+            .setTitle("Ask AI about selected text or image")
             .setIcon("message-circle-question")
             .onClick(() => void this.openAiQuestion(editor, info));
         });
@@ -130,7 +130,7 @@ export default class AiReadingCompanionPlugin extends Plugin {
 
     this.addCommand({
       id: "ask-ai-about-selection",
-      name: "Ask AI about selected text",
+      name: "Ask AI about selected text or image",
       editorCheckCallback: (checking, editor, view) => {
         const canUse = this.canUseSelection(editor, view);
         if (canUse && !checking) {
@@ -246,26 +246,60 @@ export default class AiReadingCompanionPlugin extends Plugin {
   }
 
   canUseSelection(editor, info) {
-    return Boolean(
-      info &&
-        info.file &&
-        editor &&
+    return Boolean(this.getEditorSelectionPayload(editor, info));
+  }
+
+  hasImageReference(value) {
+    const text = String(value || "");
+    return /!\[\[[^\]]+\]\]|!\[[^\]]*\]\([^)\n]+\)/.test(text);
+  }
+
+  getEditorSelectionPayload(editor, info) {
+    const sourceFile = info && info.file;
+    if (!sourceFile || !editor) {
+      return null;
+    }
+
+    const hasTextSelection = Boolean(
+      editor.somethingSelected &&
         editor.somethingSelected() &&
-        editor.getSelection().trim(),
+        String(editor.getSelection() || "").trim(),
     );
+    if (hasTextSelection) {
+      return {
+        excerpt: String(editor.getSelection() || "").trim(),
+        from: editor.getCursor("from"),
+        to: editor.getCursor("to"),
+      };
+    }
+
+    const cursor = editor.getCursor();
+    const currentLine = String(editor.getLine(cursor.line) || "").trim();
+    if (!this.hasImageReference(currentLine)) {
+      return null;
+    }
+    return {
+      excerpt: currentLine,
+      from: cursor,
+      to: cursor,
+    };
   }
 
   getSelectionContext(editor, info) {
     const sourceFile = info && info.file;
-    const excerpt = editor && editor.getSelection().trim();
-    if (!sourceFile || !excerpt) {
+    const selection = this.getEditorSelectionPayload(editor, info);
+    if (!sourceFile || !selection) {
       return null;
     }
 
-    const from = editor.getCursor("from");
-    const to = editor.getCursor("to");
+    const { excerpt, from, to } = selection;
     const heading = this.findNearestHeading(editor, from.line);
     const sourcePath = sourceFile.path.replace(/\.md$/i, "");
+    const imageContext = this.findImageReferences(excerpt, sourceFile.path);
+    imageContext.images = imageContext.images.map((image) => ({
+      ...image,
+      explicitlySelected: true,
+    }));
 
     return {
       excerpt,
@@ -273,14 +307,14 @@ export default class AiReadingCompanionPlugin extends Plugin {
       sourceHeading: heading,
       sourceLink: `[[${sourcePath}${heading ? `#${heading}` : ""}]]`,
       lineRange: `${from.line + 1}-${to.line + 1}`,
-      ...this.findImageReferences(excerpt, sourceFile.path),
+      ...imageContext,
     };
   }
 
   async openAiQuestion(editor, info) {
     const context = this.getSelectionContext(editor, info);
     if (!context) {
-      new Notice("Select some text in a Markdown note first.");
+      new Notice("Select text or right-click an image in a Markdown note first.");
       return;
     }
 
@@ -1266,7 +1300,8 @@ class AiQuestionView extends ItemView {
     this.imageSelections = ((context && context.images) || []).map((image) => ({
       ...image,
       selected:
-        this.plugin.settings.aiAutoSelectImages === true &&
+        (image.explicitlySelected === true ||
+          this.plugin.settings.aiAutoSelectImages === true) &&
         (image.size === null || image.size <= MAX_IMAGE_BYTES),
     }));
     this.excerptDraft = "";
@@ -1293,7 +1328,8 @@ class AiQuestionView extends ItemView {
       imageSelections: ((context && context.images) || []).map((image) => ({
         ...image,
         selected:
-          this.plugin.settings.aiAutoSelectImages === true &&
+          (image.explicitlySelected === true ||
+            this.plugin.settings.aiAutoSelectImages === true) &&
           (image.size === null || image.size <= MAX_IMAGE_BYTES),
       })),
       draft: "",
