@@ -100,17 +100,30 @@ plugin.testData = {
   aiBaseUrl: "https://api.kimi.com/coding/",
 };
 plugin.app = {
-  workspace: { on: () => ({}) },
+  workspace: {
+    on: () => ({}),
+    getActiveFile: () => ({ path: "Reading/image-note.md" }),
+  },
   metadataCache: {
-    getFirstLinkpathDest: (target) =>
-      target === "assets/chart.png"
-        ? {
-            path: "Reading/assets/chart.png",
-            name: "chart.png",
-            extension: "png",
-            stat: { size: 2048 },
-          }
-        : null,
+    getFirstLinkpathDest: (target) => {
+      if (target === "assets/chart.png") {
+        return {
+          path: "Reading/assets/chart.png",
+          name: "chart.png",
+          extension: "png",
+          stat: { size: 2048 },
+        };
+      }
+      if (target === "images/fig1-3.svg") {
+        return {
+          path: "Reading/images/fig1-3.svg",
+          name: "fig1-3.svg",
+          extension: "svg",
+          stat: { size: 4096 },
+        };
+      }
+      return null;
+    },
   },
 };
 await plugin.onload();
@@ -134,6 +147,44 @@ assert.equal(imageOnlyContext.excerpt, "![[assets/chart.png]]");
 assert.equal(imageOnlyContext.images.length, 1);
 assert.equal(imageOnlyContext.images[0].explicitlySelected, true);
 assert.equal(view.createSession(imageOnlyContext).imageSelections[0].selected, true);
+
+const imageEmbed = {
+  getAttribute: (name) => (name === "src" ? "images/fig1-3.svg" : null),
+};
+const renderedImage = {
+  ownerDocument: {},
+  parentElement: imageEmbed,
+  getAttribute: (name) =>
+    name === "src"
+      ? "app://obsidian.md/Reading/images/fig1-3.svg"
+      : name === "alt"
+        ? "Agent trajectory"
+        : null,
+  closest: (selector) =>
+    selector === "img"
+      ? renderedImage
+      : selector.includes("markdown-source-view")
+      ? {}
+      : selector.includes("internal-embed")
+        ? imageEmbed
+        : null,
+};
+plugin.captureImageContext({ target: renderedImage });
+assert.equal(plugin.lastContextImage.target, "images/fig1-3.svg");
+const renderedImageEditor = {
+  somethingSelected: () => false,
+  getSelection: () => "",
+  getCursor: () => ({ line: 8, ch: 0 }),
+  getLine: () => "Unrelated paragraph text",
+};
+assert.equal(plugin.canUseSelection(renderedImageEditor, imageInfo), true);
+const renderedImageContext = plugin.getSelectionContext(
+  renderedImageEditor,
+  imageInfo,
+);
+assert.equal(renderedImageContext.excerpt, "![[images/fig1-3.svg]]");
+assert.equal(renderedImageContext.images[0].extension, "svg");
+plugin.lastContextImage = null;
 
 const mixedEditor = {
   somethingSelected: () => true,

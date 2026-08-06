@@ -107,9 +107,11 @@ export default class AiReadingCompanionPlugin extends Plugin {
     this.addSettingTab(new AiReadingCompanionSettingTab(this.app, this));
 
     this.registerInternalLinkHandler(document);
+    this.registerImageContextHandler(document);
     this.registerEvent(
       this.app.workspace.on("window-open", (_workspaceWindow, win) => {
         this.registerInternalLinkHandler(win.document);
+        this.registerImageContextHandler(win.document);
       }),
     );
 
@@ -196,6 +198,101 @@ export default class AiReadingCompanionPlugin extends Plugin {
     );
   }
 
+  registerImageContextHandler(doc) {
+    this.registerDomEvent(
+      doc,
+      "contextmenu",
+      (event) => this.captureImageContext(event),
+      true,
+    );
+  }
+
+  captureImageContext(event) {
+    const target = event.target;
+    const imageEl = target && target.closest ? target.closest("img") : null;
+    if (
+      !imageEl ||
+      !imageEl.closest(".markdown-source-view, .markdown-preview-view")
+    ) {
+      this.lastContextImage = null;
+      return;
+    }
+
+    const imageReference = this.getImageReferenceFromElement(imageEl);
+    if (!imageReference) {
+      this.lastContextImage = null;
+      return;
+    }
+    const sourceFile = this.app.workspace.getActiveFile();
+    this.lastContextImage = {
+      ...imageReference,
+      capturedAt: Date.now(),
+      sourceFilePath: sourceFile ? sourceFile.path : "",
+      ownerDocument: imageEl.ownerDocument,
+    };
+  }
+
+  getImageReferenceFromElement(imageEl) {
+    const embed = imageEl.closest(
+      ".internal-embed, .image-embed, .media-embed",
+    );
+    const candidates = [];
+    for (const element of [embed, imageEl.parentElement, imageEl]) {
+      if (!element || !element.getAttribute) {
+        continue;
+      }
+      for (const attribute of ["src", "data-src", "data-href"]) {
+        const value = element.getAttribute(attribute);
+        if (value) {
+          candidates.push(value);
+        }
+      }
+    }
+    const alt = String(imageEl.getAttribute("alt") || "").trim();
+    if (alt) {
+      candidates.push(alt);
+    }
+
+    for (const rawCandidate of candidates) {
+      const candidate = String(rawCandidate || "").trim();
+      if (
+        !candidate ||
+        /^(?:app|file|blob|data|obsidian):/i.test(candidate)
+      ) {
+        continue;
+      }
+      if (/^https?:\/\//i.test(candidate)) {
+        return {
+          target: candidate,
+          markdown: `![${alt}](${candidate})`,
+        };
+      }
+      const extension = this.getPathExtension(candidate.split("|")[0]);
+      if (IMAGE_MIME_TYPES[extension]) {
+        return {
+          target: candidate,
+          markdown: `![[${candidate}]]`,
+        };
+      }
+    }
+    return null;
+  }
+
+  getRecentContextImage(info) {
+    const contextImage = this.lastContextImage;
+    const sourceFile = info && info.file;
+    if (
+      !contextImage ||
+      !sourceFile ||
+      Date.now() - contextImage.capturedAt > 15000 ||
+      (contextImage.sourceFilePath &&
+        contextImage.sourceFilePath !== sourceFile.path)
+    ) {
+      return null;
+    }
+    return contextImage;
+  }
+
   handleInternalLinkClick(event) {
     const mode = this.settings.internalLinkOpenMode;
     if (
@@ -260,20 +357,32 @@ export default class AiReadingCompanionPlugin extends Plugin {
       return null;
     }
 
+    const contextImage = this.getRecentContextImage(info);
     const hasTextSelection = Boolean(
       editor.somethingSelected &&
         editor.somethingSelected() &&
         String(editor.getSelection() || "").trim(),
     );
     if (hasTextSelection) {
+      let excerpt = String(editor.getSelection() || "").trim();
+      if (contextImage && !excerpt.includes(contextImage.target)) {
+        excerpt = `${excerpt}\n\n${contextImage.markdown}`;
+      }
       return {
-        excerpt: String(editor.getSelection() || "").trim(),
+        excerpt,
         from: editor.getCursor("from"),
         to: editor.getCursor("to"),
       };
     }
 
     const cursor = editor.getCursor();
+    if (contextImage) {
+      return {
+        excerpt: contextImage.markdown,
+        from: cursor,
+        to: cursor,
+      };
+    }
     const currentLine = String(editor.getLine(cursor.line) || "").trim();
     if (!this.hasImageReference(currentLine)) {
       return null;

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added direct right-click detection for rendered Live Preview images, without requiring the editor cursor to be moved onto the image source line.
 - Added image-only and mixed text-plus-image context-menu entry points; images explicitly included in the selection now start checked.
 - Added an editable per-conversation excerpt draft: select text in any AI answer, use the contextual action, collect multiple passages, then save once.
 - Fixed Obsidian's default button height collapsing conversation previews so the selected source text is now always visible in the conversation list.

@@ -22,7 +22,7 @@ The conversation, reasoning output, search results, and unselected answer text a
 
 ## How to use
 
-1. Select text, text plus images, or a single image in any Markdown note. For an image-only question, place the editor cursor on the image line.
+1. Select text, text plus images, or right-click a rendered image directly in any Markdown note.
 2. Right-click and choose **Ask AI about selected text or image**, or run the command from the command palette.
 3. Continue the conversation in the pop-out or sidebar view.
 4. Select the exact part of an assistant answer that you want to keep, then choose **Add to draft** beside the selection. Repeat across any number of turns.
