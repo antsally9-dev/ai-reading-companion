@@ -17,7 +17,9 @@ The conversation, reasoning output, search results, and unselected answer text a
 - Optionally collect each source document's confirmed Q&A in `Folder/Note/AI conversations.md`.
 - Include the selected source passage in a native Obsidian callout that is collapsed by default.
 - Configurable destination heading and Markdown save template.
-- Pop-out or right-sidebar conversation view.
+- Pop-out or right-sidebar conversation view on desktop.
+- A mobile-first full-tab view with Conversation, Passage, and Draft sections.
+- Touch-friendly text selection and direct image-tap question entry on phones and tablets.
 - Configurable behavior for ordinary internal links.
 
 ## How to use
@@ -27,6 +29,16 @@ The conversation, reasoning output, search results, and unselected answer text a
 3. Continue the conversation in the pop-out or sidebar view.
 4. Select the exact part of an assistant answer that you want to keep, then choose **Add to draft** beside the selection. Repeat across any number of turns.
 5. Edit the collected passages in the left-side draft and choose **Save draft**.
+
+### Mobile
+
+1. Add **AI Reading Companion: Ask AI about selected text or image** to Obsidian's mobile toolbar, or use the plugin ribbon action.
+2. To ask about text, select it and run that action.
+3. To ask about an image, tap the rendered image, then tap **Ask AI about this image**.
+4. Use the **Conversation**, **Passage**, and **Draft** tabs to switch without stacking all three areas on one screen.
+5. Use the conversation selector above the tabs to return to an earlier selection.
+
+On tablets, Obsidian may provide more room, but the same touch-safe workflow is used whenever the app is running in mobile mode.
 
 By default, the excerpt is appended to the source note under:
 

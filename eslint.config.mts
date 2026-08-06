@@ -30,6 +30,17 @@ export default defineConfig(
 	},
 	...obsidianmd.configs.recommended,
 	{
+		files: ['scripts/*.mjs'],
+		languageOptions: {
+			globals: {
+				...globals.node,
+			},
+		},
+		rules: {
+			'obsidianmd/no-nodejs-modules': 'off',
+		},
+	},
+	{
 		files: ['src/**/*.ts'],
 		rules: {
 			// The searchable declarative settings API requires Obsidian 1.13.0.

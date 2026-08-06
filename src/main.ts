@@ -6,6 +6,7 @@ import {
   Notice,
   Plugin,
   PluginSettingTab,
+  Platform,
   SecretComponent,
   Setting,
   arrayBufferToBase64,
@@ -100,6 +101,7 @@ export default class AiReadingCompanionPlugin extends Plugin {
 
   async onload() {
     await this.loadSettings();
+    this.mobileImageActions = new Map();
     this.registerView(
       AI_CHAT_VIEW_TYPE,
       (leaf) => new AiQuestionView(leaf, this),
@@ -108,10 +110,12 @@ export default class AiReadingCompanionPlugin extends Plugin {
 
     this.registerInternalLinkHandler(document);
     this.registerImageContextHandler(document);
+    this.registerMobileImageHandler(document);
     this.registerEvent(
       this.app.workspace.on("window-open", (_workspaceWindow, win) => {
         this.registerInternalLinkHandler(win.document);
         this.registerImageContextHandler(win.document);
+        this.registerMobileImageHandler(win.document);
       }),
     );
 
@@ -141,6 +145,38 @@ export default class AiReadingCompanionPlugin extends Plugin {
         return canUse;
       },
     });
+
+    if (this.isMobileApp()) {
+      this.addRibbonIcon(
+        "message-circle-question",
+        "Ask AI about selected text or image",
+        () => void this.openAiQuestionFromActiveView(),
+      );
+    }
+  }
+
+  onunload() {
+    for (const action of this.mobileImageActions?.values() || []) {
+      action.remove();
+    }
+    this.mobileImageActions?.clear();
+  }
+
+  isMobileApp() {
+    return Boolean(Platform?.isMobile || Platform?.isMobileApp);
+  }
+
+  async openAiQuestionFromActiveView() {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) {
+      new Notice("Open a Markdown note first.");
+      return;
+    }
+    if (!this.canUseSelection(view.editor, view)) {
+      new Notice("Select text or tap an image first, then run the command again.");
+      return;
+    }
+    await this.openAiQuestion(view.editor, view);
   }
 
   async loadSettings() {
@@ -207,21 +243,66 @@ export default class AiReadingCompanionPlugin extends Plugin {
     );
   }
 
+  registerMobileImageHandler(doc) {
+    if (!this.isMobileApp() || this.mobileImageActions.has(doc)) {
+      return;
+    }
+
+    const action = doc.createElement("button");
+    action.type = "button";
+    action.className = "ai-agent-mobile-image-action is-hidden";
+    action.setAttribute("aria-label", "Ask AI about this image");
+    const icon = doc.createElement("span");
+    setIcon(icon, "message-circle-question");
+    const label = doc.createElement("span");
+    label.textContent = "Ask AI about this image";
+    action.append(icon, label);
+    doc.body.appendChild(action);
+    this.mobileImageActions.set(doc, action);
+
+    this.registerDomEvent(
+      doc,
+      "click",
+      (event) => {
+        const target = event.target as HTMLElement | null;
+        if (action.contains(target)) {
+          return;
+        }
+        const imageEl = target && target.closest ? target.closest("img") : null;
+        if (imageEl && this.captureImageElement(imageEl)) {
+          action.removeClass("is-hidden");
+          action.setAttribute("aria-hidden", "false");
+          return;
+        }
+        action.addClass("is-hidden");
+        action.setAttribute("aria-hidden", "true");
+      },
+      true,
+    );
+    this.registerDomEvent(action, "click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      action.addClass("is-hidden");
+      void this.openAiQuestionFromActiveView();
+    });
+  }
+
   captureImageContext(event) {
     const target = event.target;
     const imageEl = target && target.closest ? target.closest("img") : null;
-    if (
-      !imageEl ||
-      !imageEl.closest(".markdown-source-view, .markdown-preview-view")
-    ) {
+    if (!imageEl || !this.captureImageElement(imageEl)) {
       this.lastContextImage = null;
-      return;
+    }
+  }
+
+  captureImageElement(imageEl) {
+    if (!imageEl.closest(".markdown-source-view, .markdown-preview-view")) {
+      return false;
     }
 
     const imageReference = this.getImageReferenceFromElement(imageEl);
     if (!imageReference) {
-      this.lastContextImage = null;
-      return;
+      return false;
     }
     const sourceFile = this.app.workspace.getActiveFile();
     this.lastContextImage = {
@@ -230,6 +311,7 @@ export default class AiReadingCompanionPlugin extends Plugin {
       sourceFilePath: sourceFile ? sourceFile.path : "",
       ownerDocument: imageEl.ownerDocument,
     };
+    return true;
   }
 
   getImageReferenceFromElement(imageEl) {
@@ -443,6 +525,19 @@ export default class AiReadingCompanionPlugin extends Plugin {
   }
 
   async getAiConversationLeaf() {
+    if (this.isMobileApp()) {
+      const existingLeaf = this.app.workspace.getLeavesOfType(AI_CHAT_VIEW_TYPE)[0];
+      if (existingLeaf) {
+        return existingLeaf;
+      }
+      const leaf = this.app.workspace.getLeaf("tab");
+      await leaf.setViewState({
+        type: AI_CHAT_VIEW_TYPE,
+        active: true,
+      });
+      return leaf;
+    }
+
     const mode = this.settings.aiConversationOpenMode || "window";
     if (mode === "sidebar") {
       return this.app.workspace.ensureSideLeaf(
@@ -1374,6 +1469,8 @@ class AiQuestionView extends ItemView {
     this.activeSession = null;
     this.nextSessionId = 1;
     this.sessionListExpanded = true;
+    this.mobileViewTab = "chat";
+    this.mobileTabButtons = new Map();
     this.context = null;
     this.sessionGeneration = 0;
     this.renderComponent = null;
@@ -1490,6 +1587,7 @@ class AiQuestionView extends ItemView {
   renderWaitingState() {
     this.contentEl.empty();
     this.contentEl.addClass("ai-agent-chat-content");
+    this.contentEl.toggleClass("is-mobile-layout", this.plugin.isMobileApp());
     const waiting = this.contentEl.createDiv({
       cls: "ai-agent-chat-waiting",
     });
@@ -1497,7 +1595,9 @@ class AiQuestionView extends ItemView {
     setIcon(icon, "text-select");
     waiting.createEl("h3", { text: "Select text to start a reading conversation" });
     waiting.createEl("p", {
-      text: "Select text in a Markdown note, then choose ask AI from the context menu.",
+      text: this.plugin.isMobileApp()
+        ? "Select text and run Ask AI from the mobile toolbar, or tap an image and use its Ask AI button."
+        : "Select text in a Markdown note, then choose ask AI from the context menu.",
     });
   }
 
@@ -1514,9 +1614,13 @@ class AiQuestionView extends ItemView {
 
     this.contentEl.empty();
     this.contentEl.addClass("ai-agent-chat-content");
+    this.contentEl.toggleClass("is-mobile-layout", this.plugin.isMobileApp());
     this.renderComponent = new Component();
     this.renderComponent.load();
     this.renderHeader(this.contentEl);
+    if (this.plugin.isMobileApp()) {
+      this.renderMobileNavigation(this.contentEl);
+    }
     this.renderSessionBrowser(this.contentEl);
     const shell = this.contentEl.createDiv({ cls: "ai-agent-chat-shell" });
     this.renderContextPanel(shell);
@@ -1525,7 +1629,9 @@ class AiQuestionView extends ItemView {
     this.questionEl.value = this.activeSession.draft || "";
     this.resizeComposer();
     this.updateComposerState();
-    this.contentEl.win.requestAnimationFrame(() => this.questionEl.focus());
+    if (!this.plugin.isMobileApp()) {
+      this.contentEl.win.requestAnimationFrame(() => this.questionEl.focus());
+    }
   }
 
   async onOpen(): Promise<void> {
@@ -1546,6 +1652,7 @@ class AiQuestionView extends ItemView {
     const session = this.createSession(context);
     this.sessions.unshift(session);
     this.activateSession(session);
+    this.mobileViewTab = "chat";
     this.renderActiveSession();
   }
 
@@ -1643,6 +1750,103 @@ class AiQuestionView extends ItemView {
       .replace(/[*_`>#]/g, "")
       .replace(/\s+/g, " ")
       .trim();
+  }
+
+  renderMobileNavigation(contentEl) {
+    const navigation = contentEl.createEl("nav", {
+      cls: "ai-agent-mobile-navigation",
+      attr: { "aria-label": "AI reading companion navigation" },
+    });
+    const sessionRow = navigation.createDiv({
+      cls: "ai-agent-mobile-session-row",
+    });
+    const sessionSelect = sessionRow.createEl("select", {
+      cls: "dropdown ai-agent-mobile-session-select",
+      attr: { "aria-label": "Choose a conversation" },
+    });
+    for (const session of this.sessions) {
+      const preview = this.getSessionPreview(session) || this.getSessionTitle(session);
+      const option = sessionSelect.createEl("option", {
+        value: String(session.id),
+        text: `Conversation ${session.id} · ${preview.slice(0, 46)}`,
+      });
+      option.selected = session === this.activeSession;
+    }
+    sessionSelect.addEventListener("change", () => {
+      this.switchSession(Number(sessionSelect.value));
+    });
+    const deleteButton = sessionRow.createEl("button", {
+      cls: "clickable-icon ai-agent-mobile-session-delete",
+      attr: {
+        type: "button",
+        "aria-label": "Delete current conversation",
+        title: "Delete current conversation",
+      },
+    });
+    setIcon(deleteButton, "trash-2");
+    deleteButton.addEventListener("click", () => {
+      if (this.activeSession) {
+        this.deleteSession(this.activeSession.id);
+      }
+    });
+
+    const tabs = navigation.createDiv({
+      cls: "ai-agent-mobile-tabs",
+      attr: { role: "tablist", "aria-label": "Conversation sections" },
+    });
+    this.mobileTabButtons = new Map();
+    const tabDefinitions = [
+      { id: "chat", label: "Conversation", icon: "messages-square" },
+      { id: "source", label: "Passage", icon: "book-open-text" },
+      {
+        id: "draft",
+        label: this.excerptCount ? `Draft (${this.excerptCount})` : "Draft",
+        icon: "notebook-pen",
+      },
+    ];
+    for (const tab of tabDefinitions) {
+      const button = tabs.createEl("button", {
+        cls: "ai-agent-mobile-tab",
+        attr: {
+          type: "button",
+          role: "tab",
+          "aria-controls":
+            tab.id === "chat"
+              ? "ai-agent-mobile-panel-chat"
+              : "ai-agent-mobile-panel-context",
+        },
+      });
+      const icon = button.createSpan();
+      setIcon(icon, tab.icon);
+      button.createSpan({ text: tab.label });
+      button.addEventListener("click", () => this.setMobileViewTab(tab.id));
+      this.mobileTabButtons.set(tab.id, button);
+    }
+    this.setMobileViewTab(this.mobileViewTab || "chat", false);
+  }
+
+  setMobileViewTab(tab, focus = true) {
+    if (!["chat", "source", "draft"].includes(tab)) {
+      tab = "chat";
+    }
+    this.mobileViewTab = tab;
+    this.contentEl.setAttr("data-mobile-tab", tab);
+    for (const [id, button] of this.mobileTabButtons || []) {
+      const active = id === tab;
+      button.toggleClass("is-active", active);
+      button.setAttr("aria-selected", String(active));
+      button.setAttr("tabindex", active ? "0" : "-1");
+    }
+    if (!focus) {
+      return;
+    }
+    this.contentEl.win.requestAnimationFrame(() => {
+      if (tab === "chat" && this.questionEl) {
+        this.questionEl.focus();
+      } else if (tab === "draft" && this.excerptEditorEl) {
+        this.excerptEditorEl.focus();
+      }
+    });
   }
 
   renderSessionBrowser(contentEl) {
@@ -1772,7 +1976,10 @@ class AiQuestionView extends ItemView {
   renderContextPanel(shell) {
     const aside = shell.createEl("aside", {
       cls: "ai-agent-context-panel",
-      attr: { "aria-label": "Reading context" },
+      attr: {
+        id: "ai-agent-mobile-panel-context",
+        "aria-label": "Reading context",
+      },
     });
     const eyebrow = aside.createDiv({
       cls: "ai-agent-context-eyebrow",
@@ -2039,7 +2246,10 @@ class AiQuestionView extends ItemView {
   renderChatPanel(shell) {
     const panel = shell.createEl("section", {
       cls: "ai-agent-conversation-panel",
-      attr: { "aria-label": "Reading conversation" },
+      attr: {
+        id: "ai-agent-mobile-panel-chat",
+        "aria-label": "Reading conversation",
+      },
     });
     const topbar = panel.createDiv({ cls: "ai-agent-conversation-topbar" });
     const topbarTitle = topbar.createDiv();
@@ -2291,6 +2501,12 @@ class AiQuestionView extends ItemView {
       body.addEventListener("keyup", () => {
         this.captureMessageSelection(message);
       });
+      body.addEventListener("touchend", () => {
+        this.contentEl.win.setTimeout(
+          () => this.captureMessageSelection(message),
+          80,
+        );
+      });
       this.renderAssistantActions(message, card);
     }
 
@@ -2400,6 +2616,7 @@ class AiQuestionView extends ItemView {
     setIcon(icon, "list-plus");
     addButton.createSpan({ text: "Add to draft" });
     addButton.addEventListener("mousedown", (event) => event.preventDefault());
+    addButton.addEventListener("pointerdown", (event) => event.preventDefault());
     addButton.addEventListener("click", () => {
       if (this.selectedMessage && this.selectedMessage.selectedText) {
         this.addTextToExcerptDraft(
@@ -2429,6 +2646,14 @@ class AiQuestionView extends ItemView {
       return;
     }
     this.selectedMessage = message;
+    if (this.plugin.isMobileApp()) {
+      this.selectionToolbarEl.style.removeProperty("left");
+      this.selectionToolbarEl.style.removeProperty("top");
+      this.selectionToolbarEl.addClass("is-mobile");
+      this.selectionToolbarEl.removeClass("is-hidden");
+      return;
+    }
+    this.selectionToolbarEl.removeClass("is-mobile");
     const win = this.contentEl.win;
     const halfWidth = 84;
     const left = Math.min(

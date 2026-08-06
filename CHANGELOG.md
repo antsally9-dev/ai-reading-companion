@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 1.1.0
+
+- Added a mobile-first conversation view with separate Conversation, Passage, and Draft tabs.
+- Added a compact mobile conversation selector with source-text previews.
+- Opened AI conversations in a normal Obsidian tab on mobile instead of attempting a desktop pop-out.
+- Added a touch-friendly image action: tap a rendered note image, then choose **Ask AI about this image**.
+- Added mobile-toolbar and ribbon access for asking about selected text or the most recently tapped image.
+- Added touch selection support and a bottom action bar for collecting part of an AI answer into the draft.
+- Added safe-area, soft-keyboard, mobile reading, and 44-pixel touch-target styling.
+- Added a mobile smoke test that verifies the plugin never requests a pop-out window.
+
 - Added direct right-click detection for rendered Live Preview images, without requiring the editor cursor to be moved onto the image source line.
 - Added image-only and mixed text-plus-image context-menu entry points; images explicitly included in the selection now start checked.
 - Added an editable per-conversation excerpt draft: select text in any AI answer, use the contextual action, collect multiple passages, then save once.

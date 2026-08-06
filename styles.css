@@ -112,6 +112,38 @@
   height: 0.9rem;
 }
 
+.ai-agent-mobile-navigation {
+  display: none;
+}
+
+.ai-agent-mobile-image-action {
+  display: inline-flex;
+  position: fixed;
+  right: max(0.8rem, env(safe-area-inset-right));
+  bottom: calc(max(0.8rem, env(safe-area-inset-bottom)) + 3.4rem);
+  z-index: var(--layer-menu);
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--color-orange) 55%, var(--background-modifier-border));
+  border-radius: 999px;
+  color: var(--text-on-accent);
+  background: var(--color-orange);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 24%);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+}
+
+.ai-agent-mobile-image-action.is-hidden {
+  display: none;
+}
+
+.ai-agent-mobile-image-action svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 .ai-agent-session-browser {
   flex: 0 0 auto;
   border-bottom: 1px solid var(--background-modifier-border);
@@ -1188,6 +1220,229 @@
   .ai-agent-composer-status {
     max-width: 8rem;
   }
+}
+
+.ai-agent-chat-content.is-mobile-layout {
+  padding-bottom: env(safe-area-inset-bottom);
+  overscroll-behavior: contain;
+}
+
+.is-mobile-layout .ai-agent-chat-header {
+  min-height: 3.25rem;
+  padding: 0.6rem 0.85rem;
+}
+
+.is-mobile-layout .ai-agent-chat-title-icon,
+.is-mobile-layout .ai-agent-chat-subtitle,
+.is-mobile-layout .ai-agent-chat-model,
+.is-mobile-layout .ai-agent-session-browser {
+  display: none;
+}
+
+.is-mobile-layout .ai-agent-chat-title-group h2 {
+  font-size: 1.05rem;
+}
+
+.is-mobile-layout .ai-agent-mobile-navigation {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  border-bottom: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+}
+
+.ai-agent-mobile-session-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.75rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.65rem 0.35rem;
+}
+
+.ai-agent-mobile-session-select {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-agent-mobile-session-delete {
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--text-muted);
+}
+
+.ai-agent-mobile-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 0 0.45rem;
+}
+
+.ai-agent-mobile-tab {
+  display: inline-flex;
+  position: relative;
+  min-width: 0;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.25rem 0.55rem;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text-muted);
+  background: transparent;
+  font-size: var(--font-ui-smaller);
+}
+
+.ai-agent-mobile-tab::after {
+  position: absolute;
+  right: 0.55rem;
+  bottom: 0;
+  left: 0.55rem;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+  content: "";
+}
+
+.ai-agent-mobile-tab.is-active {
+  color: var(--color-orange);
+  font-weight: var(--font-semibold);
+}
+
+.ai-agent-mobile-tab.is-active::after {
+  background: var(--color-orange);
+}
+
+.ai-agent-mobile-tab svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.is-mobile-layout .ai-agent-chat-shell {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.is-mobile-layout[data-mobile-tab="chat"] .ai-agent-context-panel,
+.is-mobile-layout[data-mobile-tab="source"] .ai-agent-conversation-panel,
+.is-mobile-layout[data-mobile-tab="draft"] .ai-agent-conversation-panel {
+  display: none;
+}
+
+.is-mobile-layout[data-mobile-tab="source"] .ai-agent-context-panel,
+.is-mobile-layout[data-mobile-tab="draft"] .ai-agent-context-panel,
+.is-mobile-layout[data-mobile-tab="chat"] .ai-agent-conversation-panel {
+  display: flex;
+}
+
+.is-mobile-layout .ai-agent-context-panel {
+  min-height: 0;
+  flex-direction: column;
+  padding: 0.85rem 0.9rem max(1rem, env(safe-area-inset-bottom));
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.is-mobile-layout[data-mobile-tab="source"] .ai-agent-excerpt-workspace {
+  display: none;
+}
+
+.is-mobile-layout[data-mobile-tab="draft"] .ai-agent-context-panel > :not(.ai-agent-excerpt-workspace) {
+  display: none;
+}
+
+.is-mobile-layout[data-mobile-tab="draft"] .ai-agent-excerpt-workspace {
+  display: block;
+  min-height: calc(100% - 0.5rem);
+  margin: 0;
+}
+
+.is-mobile-layout[data-mobile-tab="draft"] .ai-agent-excerpt-editor {
+  min-height: 44vh;
+  resize: none;
+}
+
+.is-mobile-layout .ai-agent-context-markdown {
+  max-height: none;
+  overflow: visible;
+  font-size: 0.96rem;
+}
+
+.is-mobile-layout .ai-agent-conversation-topbar {
+  padding: 0.55rem 0.8rem;
+}
+
+.is-mobile-layout .ai-agent-message-list {
+  padding: 0.8rem 0.7rem 1.2rem;
+  overscroll-behavior-y: contain;
+}
+
+.is-mobile-layout .ai-agent-message {
+  grid-template-columns: 1fr;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+
+.is-mobile-layout .ai-agent-message-rail {
+  padding: 0 0.15rem;
+}
+
+.is-mobile-layout .ai-agent-message-card {
+  padding: 0.75rem 0.8rem;
+}
+
+.is-mobile-layout .ai-agent-message-body {
+  font-size: 1rem;
+  line-height: 1.68;
+  -webkit-touch-callout: default;
+}
+
+.is-mobile-layout .ai-agent-message-action {
+  min-height: 2.5rem;
+}
+
+.is-mobile-layout .ai-agent-composer {
+  margin: 0 0.6rem max(0.6rem, env(safe-area-inset-bottom));
+  padding: 0.5rem 0.55rem 0.45rem;
+}
+
+.is-mobile-layout .ai-agent-composer-input {
+  min-height: 2.75rem;
+  max-height: min(132px, 22dvh);
+  font-size: 16px;
+}
+
+.is-mobile-layout .ai-agent-composer-status {
+  display: none;
+}
+
+.is-mobile-layout .ai-agent-send-button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  justify-content: center;
+}
+
+.is-mobile-layout .ai-agent-selection-toolbar.is-mobile {
+  position: fixed;
+  top: auto;
+  right: max(0.7rem, env(safe-area-inset-right));
+  bottom: calc(max(0.7rem, env(safe-area-inset-bottom)) + 5.4rem);
+  left: max(0.7rem, env(safe-area-inset-left));
+  z-index: var(--layer-menu);
+  justify-content: center;
+  transform: none;
+}
+
+.is-mobile-layout .ai-agent-selection-toolbar.is-mobile .ai-agent-selection-add {
+  width: 100%;
+  min-height: 2.75rem;
+  justify-content: center;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -7,6 +7,7 @@ let requestHandler = async () => {
   throw new Error("Unexpected network request in smoke test.");
 };
 let registeredViewFactory = null;
+let registeredViewType = null;
 
 class Plugin {
   async loadData() {
@@ -17,7 +18,8 @@ class Plugin {
     this.testData = data;
   }
 
-  registerView(_type, factory) {
+  registerView(type, factory) {
+    registeredViewType = type;
     registeredViewFactory = factory;
   }
 
@@ -25,6 +27,7 @@ class Plugin {
   registerDomEvent() {}
   registerEvent() {}
   addCommand() {}
+  addRibbonIcon() {}
 }
 
 class ItemView {
@@ -58,6 +61,10 @@ const obsidianMock = {
   Notice: class {},
   Plugin,
   PluginSettingTab,
+  Platform: {
+    isMobile: false,
+    isMobileApp: false,
+  },
   SecretComponent,
   Setting,
   arrayBufferToBase64: (buffer) => Buffer.from(buffer).toString("base64"),
@@ -130,6 +137,33 @@ await plugin.onload();
 assert.equal(plugin.settings.aiProvider, "kimi");
 assert.equal(plugin.settings.internalLinkOpenMode, "tab");
 assert.equal(typeof registeredViewFactory, "function");
+
+obsidianMock.Platform.isMobile = true;
+let mobileViewState = null;
+let popoutRequested = false;
+const mobileLeaf = {
+  setViewState: async (state) => {
+    mobileViewState = state;
+  },
+};
+plugin.app.workspace = {
+  getLeavesOfType: () => [],
+  getLeaf: (mode) => {
+    assert.equal(mode, "tab");
+    return mobileLeaf;
+  },
+  openPopoutLeaf: () => {
+    popoutRequested = true;
+  },
+};
+assert.equal(await plugin.getAiConversationLeaf(), mobileLeaf);
+assert.equal(mobileViewState.type, registeredViewType);
+assert.equal(popoutRequested, false);
+obsidianMock.Platform.isMobile = false;
+plugin.app.workspace = {
+  on: () => ({}),
+  getActiveFile: () => ({ path: "Reading/image-note.md" }),
+};
 
 const view = registeredViewFactory({ app: plugin.app });
 view.renderActiveSession = () => {};
