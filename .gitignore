@@ -18,5 +18,9 @@ main.js
 # obsidian
 data.json
 
+# Local UI audit evidence is kept outside the public source history.
+docs/audit-*/
+docs/audits/
+
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 
 const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
 const fail = (message) => {
@@ -29,6 +29,20 @@ for (const path of expectedFiles) {
   if (!existsSync(path)) {
     fail(`missing release file ${path}. Run npm run build first.`);
   }
+}
+
+const mainBytes = existsSync("main.js") ? statSync("main.js").size : 0;
+const releaseBytes = expectedFiles.reduce(
+  (total, path) => total + (existsSync(path) ? statSync(path).size : 0),
+  0,
+);
+if (mainBytes > 300 * 1024) {
+  fail(`main.js is ${(mainBytes / 1024).toFixed(1)} KiB; the release budget is 300 KiB.`);
+}
+if (releaseBytes > 400 * 1024) {
+  fail(
+    `release files total ${(releaseBytes / 1024).toFixed(1)} KiB; the release budget is 400 KiB.`,
+  );
 }
 
 if (existsSync("data.json")) {

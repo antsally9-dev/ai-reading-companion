@@ -2,6 +2,73 @@
 
 ## Unreleased
 
+- Moved bounded conversations, learning-preference memory, and runtime diagnostics into Obsidian's official plugin `data.json` persistence path with serialized writes and one-time migration from the three legacy JSON files.
+- Added a Local data and privacy settings section with explicit retention limits, review shortcuts, and a clear-all action that preserves model, search, and saving configuration.
+- Added a frozen per-request Run Plan with separate desktop/mobile text, image, tool, round, and timeout budgets.
+- Added a bounded Context Builder that prioritizes the selected passage and recent conversation, performs one deterministic compaction of older turns, and attaches a visible Context Receipt to each answer.
+- Added a shared Model Transport for Chat Completions and Responses API with stable authentication, permission, quota, rate-limit, timeout, network, request, and server error classes.
+- Added preflight resizing and WebP compression for ordinary local images, with stricter mobile count, byte, edge, and quality budgets.
+- Added a local, bounded session store that restores up to 20 recent temporary conversations without persisting image binaries, DOM state, API keys, or in-flight state.
+- Added structured Question Records for pending, asked, resolved, and parked questions while keeping them outside the knowledge notes unless the user explicitly saves content.
+- Added the staged Agent development plan under `docs/agent-development-plan.md` and kept vector retrieval, automatic memory, and generated knowledge graphs outside P0/P1.
+- Added named independent-search configurations with per-model manual selection or ordered failover.
+- Provider selection now applies a beginner-friendly recommended web route: Volcengine Ark uses hosted Responses API search, while Kimi Coding and GLM Coding Plan automatically associate their matching independent search adapter.
+- Replaced provider-specific search-switch conditionals with declarative provider presets, so every current and future provider can define its recommended route and matching search adapter in one place.
+- Providers without a paired search adapter now reuse only portable separately authenticated search profiles; web access stays disabled when the only available profiles depend on another model provider's coding-plan key.
+- Preserved expanded advanced-setting disclosures across conditional rerenders, preventing search configuration panels from collapsing after a dropdown, credential, or profile change.
+- Replaced the collapsed advanced search editor with an always-visible management section that separates the configuration selector, whole-profile actions, editable fields, and save/apply actions.
+- New search configurations now start as unsaved Tavily drafts. Saving no longer applies them implicitly; applying requires an explicit **Save and use for current model** action and a complete configuration.
+- Provider presets with paired plan search now keep one required default search configuration available. The current provider's default (including Kimi Coding) cannot be deleted or converted into another search provider, while user-created and duplicate configurations remain removable.
+- Reorganized model and web settings into continuous sections, replaced implementation-heavy labels with task-oriented copy, and moved protocol, endpoint, and search-service editing into advanced disclosures.
+- Renamed the normal independent-search behavior to **Use the selected configuration** and the optional failover behavior to **Try backup configurations when the first one is unavailable**.
+- Independent search now works as a separate execution concern for both Chat Completions and Responses API model configurations.
+- Model switching now restores the saved web route, search policy, and selected independent-search configuration list.
+- Failover is limited to eligible transient, rate-limit, quota, and server errors; authentication and configuration failures stop immediately.
+- Replaced the misleading Automatic web route with a per-model explicit choice: provider-hosted Responses API, the shared independent search service, or disabled.
+- Web routes now switch together with named model configurations; there is no implied runtime failover between search paths.
+- Added a visible current-route summary and collapsed inactive independent-search configuration so unrelated settings no longer appear simultaneously active.
+- Labeled independent integrations by established protocol—REST search API, Streamable HTTP MCP, or vendor bundled endpoint—and clarified that a URL alone is not a universal adapter.
+- Renamed the generic Remote MCP address field to Streamable HTTP MCP URL and clarified that ordinary REST URLs and local stdio commands are not compatible.
+- Added per-model Chat Completions and Responses API protocol selection.
+- Added Responses API message, image, function-tool, tool-result, final-text, and source-annotation adapters.
+- Added provider-hosted `web_search` and `web_search_preview` settings, with hosted search taking precedence over independent search to prevent duplicate requests.
+- Defaulted Volcengine Ark configurations to Responses API with the official `web_search` tool while preserving existing Kimi and GLM behavior.
+- Added stateless Responses requests (`store: false`) and smoke coverage for endpoint routing, hosted-tool declaration, and citation extraction.
+- Added named model configurations with independent provider, endpoint, model ID, and SecretStorage key references, plus switching, duplication, deletion, and automatic migration from the previous single-model settings.
+- Added a Volcengine Ark OpenAI-compatible provider preset.
+- Preserved the settings panel's vertical and horizontal scroll position when provider, language, destination, or other conditional settings trigger a redraw.
+- Added a persistent English/Simplified Chinese language switch for the complete plugin settings page, including dynamic provider descriptions and connection-test feedback.
+- Fixed the model settings so the API base URL is always visible and editable, including for custom OpenAI-compatible providers and proxy endpoints.
+- Decoupled web search from the chat-model provider so any OpenAI-compatible model can use a separately configured search service.
+- Added Tavily, Brave Search API, Exa, Serper, and self-hosted SearXNG adapters while retaining Kimi Coding built-in search.
+- Added independent search endpoints and SecretStorage keys, a neutral search connection test, and configurable result counts.
+- Added model-controlled function calling and search-before-chat modes for models with and without tool support.
+- Added automatic migration of existing Kimi Coding configurations to the Kimi search adapter.
+- Added direct public-page fetching for external search providers with local/private-network address blocking and untrusted-content framing.
+- Added model-key reuse for coding plans whose bundled search entitlement uses the same credential.
+- Added a GLM Coding Plan preset backed by the official WebSearch Prime Remote MCP service.
+- Added a configurable Streamable HTTP Remote MCP adapter for other coding-plan search services, including tool-name and query-argument settings.
+- Added MCP session negotiation, JSON/SSE response parsing, and source extraction from structured or Markdown tool results.
+- Replaced the Web-specific tool loop with a provider-neutral Agent Runtime.
+- Added a generic tool registry, JSON argument parsing, round limits, cancellation checks, lifecycle events, tool-result records, and internal artifacts.
+- Converted WebSearch and FetchURL into ordinary registered Agent Runtime tools while preserving visible sources and citations.
+- Added a standalone runtime smoke test with a non-Web tool to verify that the loop is genuinely tool-agnostic.
+- Added a Run Controller with visible lifecycle stages, a user Stop action, request timeout, and abort propagation through model, image, Web, and Remote MCP requests.
+- Added a Tool Gateway with explicit per-run grants, call budgets, result-size limits, grant validation, and deny-by-default behavior.
+- Added allowlisted folder-scoped local knowledge retrieval using cached note metadata and bounded passage reads, without embeddings or a whole-vault index.
+- Added a per-conversation local knowledge selector with automatic nearest-scope defaults and a Current note only option.
+- Added an interactive Web source review form that saves only confirmed title, excerpt, and reflection fields to a configurable inbox.
+- Added collision-safe source-note creation so existing notes are never overwritten.
+- Expanded smoke tests for cancellation, tool permissions, scope boundaries, temporary source refs, local-context injection, reviewed source saving, and collision behavior.
+- Added a bounded, incremental body-term cache inside the user-selected local knowledge scope without introducing embeddings or a whole-Vault index.
+- Added conservative personal, user-curated, external-material, and unknown identity labels with balanced retrieval lanes and visible evidence identity in Context Receipts.
+- Added retrieval of related historical user questions while explicitly excluding prior AI answers from evidence context.
+- Added candidate-based learning-preference memory with three-conversation evidence, explicit confirm/reject/delete review, expiry, and confirmed-only context injection.
+- Added bounded local runtime diagnostics for latency, outcomes, error classes, cancellation, context trimming, images, sources, rounds, and tool calls without storing user content or identifiers.
+- Added release-size guards and smoke coverage for identity balancing, historical-question retrieval, memory confirmation gates, and metric summaries.
+- Added an isolated-Obsidian Agent acceptance harness covering the installed Chat Completions tool loop, Responses hosted-search route, source annotations, stop lifecycle, Context Receipt, and no-automatic-write boundary.
+- Prevented rejected learning preferences from being recreated automatically, prioritized factual evidence over historical-question continuity under tight Context budgets, and made the runtime body index a hard bound across file-order changes.
+
 ## 1.1.0
 
 - Added a mobile-first conversation view with separate Conversation, Passage, and Draft tabs.
