@@ -20,6 +20,19 @@ export { AgentRuntime } from "./agent-runtime";
 import { raceWithAbort, throwIfAborted } from "./abort";
 import { ContextBuilder } from "./context-builder";
 export { ContextBuilder } from "./context-builder";
+import {
+  buildComplexQuestionPlanningMessages,
+  buildComplexQuestionSynthesisMessages,
+  buildSubquestionMessages,
+  parseComplexQuestionPlan,
+  shouldPlanComplexQuestion,
+  type ComplexQuestionMode,
+} from "./complex-question";
+export {
+  parseComplexQuestionPlan,
+  questionLooksComplex,
+  shouldPlanComplexQuestion,
+} from "./complex-question";
 import { ModelTransport, ModelTransportError } from "./model-transport";
 export {
   ModelTransport,
@@ -56,6 +69,8 @@ export { RunCancelledError, RunController } from "./run-controller";
 export { ToolGateway } from "./tool-gateway";
 import {
   KnowledgeScopeRetriever,
+  MAX_KNOWLEDGE_READ_CALLS,
+  MAX_KNOWLEDGE_SEARCH_CALLS,
   findKnowledgeScopeForFile,
   normalizeKnowledgeScopePaths,
 } from "./knowledge-scope";
@@ -221,6 +236,13 @@ const ZH_CN_UI: Record<string, string> = {
   "Select images by default": "默认选中图片",
   "When disabled, detected images remain visible but are sent only after you check them.":
     "关闭后，识别到的图片仍会显示，但只有手动勾选后才会发送。",
+  "Complex question handling": "复杂问题处理",
+  "Automatically split clearly multi-part questions into 2-3 focused investigations, then synthesize one answer. All parts share one tool budget and evidence cache. Planning and synthesis add model calls. Provider-hosted web search currently uses the direct-answer path because its server-side tool budget cannot be controlled here.":
+    "自动把明显包含多个部分的问题拆成 2–3 个聚焦子问题，最后汇总为一个回答。所有子问题共享同一份工具预算和证据缓存。规划与汇总会增加模型调用次数。由于插件无法控制服务商托管搜索的服务端工具预算，启用托管搜索时仍采用直接回答。",
+  "Off — always answer directly": "关闭——始终直接回答",
+  "Automatic — split only clear multi-part questions":
+    "自动——仅拆分明显的多部分问题",
+  "Always evaluate — let the planner decide": "始终评估——交由规划器判断",
   "Local knowledge": "本地知识",
   "Allow folder-scoped retrieval": "允许按文件夹检索",
   "When enabled, each conversation searches one authorized folder. If no folders are configured, the source note's own folder is used. No whole-vault vector index is created.":
@@ -619,6 +641,7 @@ const DEFAULT_SETTINGS = {
   independentSearchProfiles: [] as IndependentSearchProfile[],
   editingIndependentSearchProfileId: "",
   aiAutoSelectImages: false,
+  complexQuestionMode: "auto" as ComplexQuestionMode,
   localKnowledgeEnabled: true,
   knowledgeScopePaths: [],
   webSourceInboxPath: "AI Reading Companion/Web Sources",
@@ -892,6 +915,20 @@ export default class AiReadingCompanionPlugin extends Plugin {
         : 0,
       modelRounds: Number(runtime?.rounds || 0),
       toolCalls: Number(runtime?.toolCalls || 0),
+      toolAttempts: Number(runtime?.toolAttempts || 0),
+      toolSuccesses: Number(runtime?.toolSuccesses || 0),
+      toolBudgetDenials: Number(runtime?.toolBudgetDenials || 0),
+      toolCacheHits: Number(runtime?.toolCacheHits || 0),
+      decomposedSubquestions: Number(runtime?.decomposedSubquestions || 0),
+      toolDiagnostics: Array.isArray(runtime?.toolDiagnostics)
+        ? runtime.toolDiagnostics.map((item) => ({
+            toolName: String(item?.toolName || ""),
+            attempts: Number(item?.attempts || 0),
+            successes: Number(item?.successes || 0),
+            budgetDenials: Number(item?.budgetDenials || 0),
+            cacheHits: Number(item?.cacheHits || 0),
+          }))
+        : [],
     });
   }
 
@@ -3327,7 +3364,11 @@ export default class AiReadingCompanionPlugin extends Plugin {
             ? MAX_WEB_SEARCH_CALLS
             : toolName === "FetchURL"
               ? MAX_WEB_FETCH_CALLS
-              : 2,
+              : toolName === "SearchKnowledgeScope"
+                ? MAX_KNOWLEDGE_SEARCH_CALLS
+                : toolName === "ReadKnowledgePassages"
+                  ? MAX_KNOWLEDGE_READ_CALLS
+                  : 2,
         maxResultCharacters: MAX_WEB_TOOL_RESULT_CHARACTERS,
       };
     });
@@ -3386,31 +3427,27 @@ export default class AiReadingCompanionPlugin extends Plugin {
       signal,
     });
     const modelTransport = new ModelTransport();
-    const runtimeResult = await runtime.run({
-      messages,
-      tools: toolGateway.asRuntimeTools(),
-      maxToolRounds: runPlan.maxToolRounds,
-      signal,
-      requestAssistant: async (
-        runtimeMessages,
+    const requestAssistant = async (
+      runtimeMessages,
+      toolDefinitions,
+      allowHostedSearch = true,
+    ) => {
+      throwIfAborted(signal, "The AI request was cancelled.");
+      await emit("calling_model");
+      const response = await modelTransport.send({
+        protocol: runPlan.apiProtocol,
+        baseUrl,
+        model,
+        headers,
+        messages: runtimeMessages,
         toolDefinitions,
-      ) => {
-        throwIfAborted(signal, "The AI request was cancelled.");
-        await emit("calling_model");
-        const response = await modelTransport.send({
-          protocol: runPlan.apiProtocol,
-          baseUrl,
-          model,
-          headers,
-          messages: runtimeMessages,
-          toolDefinitions,
-          hostedWebSearchType,
-          signal,
-        });
-        collectedSources.push(...response.sources);
-        return response.assistantMessage;
-      },
-      onEvent: async (event) => {
+        hostedWebSearchType: allowHostedSearch ? hostedWebSearchType : "",
+        signal,
+      });
+      collectedSources.push(...response.sources);
+      return response.assistantMessage;
+    };
+    const onRuntimeEvent = async (event) => {
         if (event.type === "tool_start") {
           await emit("executing_tool", {
             toolName: event.toolName || "Tool",
@@ -3422,8 +3459,128 @@ export default class AiReadingCompanionPlugin extends Plugin {
             round: event.round,
           });
         }
-      },
-    });
+    };
+    const configuredComplexMode: ComplexQuestionMode =
+      this.settings.complexQuestionMode === "off" ||
+      this.settings.complexQuestionMode === "always"
+        ? this.settings.complexQuestionMode
+        : "auto";
+    const mayDecompose =
+      !useHostedWebSearch &&
+      shouldPlanComplexQuestion(latestQuestion, configuredComplexMode);
+    let complexPlan: ReturnType<typeof parseComplexQuestionPlan> | null = null;
+    if (mayDecompose) {
+      await emit("calling_model", { phase: "planning" });
+      const planningResponse = await requestAssistant(
+        buildComplexQuestionPlanningMessages(latestQuestion),
+        [],
+        false,
+      );
+      complexPlan = parseComplexQuestionPlan(planningResponse.content || "");
+    }
+
+    let runtimeResult: any;
+    if (complexPlan?.shouldDecompose) {
+      const partialAnswers: Array<{ question: string; answer: string }> = [];
+      const toolRecords: any[] = [];
+      const sharedEvidence: string[] = [];
+      let modelRounds = 1;
+      const childMaxToolRounds = Math.max(
+        1,
+        Math.floor(runPlan.maxToolRounds / complexPlan.subquestions.length),
+      );
+      for (let index = 0; index < complexPlan.subquestions.length; index += 1) {
+        throwIfAborted(signal, "The AI request was cancelled.");
+        const subquestion = complexPlan.subquestions[index];
+        const childMessages = buildSubquestionMessages(
+          messages,
+          latestQuestion,
+          subquestion,
+          index,
+          complexPlan.subquestions.length,
+        );
+        if (sharedEvidence.length) {
+          childMessages.splice(childMessages.length - 1, 0, {
+            role: "system",
+            content: [
+              "Evidence already gathered by earlier subquestions in this same run. Reuse it when relevant; do not request the same material again:",
+              "",
+              sharedEvidence.join("\n\n---\n\n").slice(0, 12_000),
+            ].join("\n"),
+          });
+        }
+        try {
+          const childResult = await new AgentRuntime().run({
+            messages: childMessages,
+            tools: toolGateway.asAvailableRuntimeTools(),
+            maxToolRounds: childMaxToolRounds,
+            signal,
+            requestAssistant: (childRuntimeMessages, toolDefinitions) =>
+              requestAssistant(childRuntimeMessages, toolDefinitions, false),
+            onEvent: onRuntimeEvent,
+          });
+          modelRounds += childResult.rounds;
+          toolRecords.push(...childResult.toolRecords);
+          partialAnswers.push({
+            question: subquestion,
+            answer: String(childResult.assistantMessage.content || "").slice(0, 8_000),
+          });
+          for (const record of childResult.toolRecords) {
+            if (
+              record.result.artifacts?.toolUnavailable ||
+              record.result.artifacts?.cacheHit
+            ) {
+              continue;
+            }
+            const content = String(record.result.content || "").trim();
+            if (content && !sharedEvidence.includes(content)) {
+              sharedEvidence.push(content);
+            }
+          }
+        } catch (error) {
+          throwIfAborted(signal, "The AI request was cancelled.");
+          if (error instanceof ModelTransportError && !error.retryable) {
+            throw error;
+          }
+          partialAnswers.push({
+            question: subquestion,
+            answer:
+              "This subquestion could not be completed during the current run. Preserve this as an explicit gap during synthesis.",
+          });
+        }
+      }
+      await emit("calling_model", { phase: "synthesis" });
+      const synthesisMessage = await requestAssistant(
+        buildComplexQuestionSynthesisMessages(
+          effectiveSystemPrompt,
+          String(context.excerpt || ""),
+          latestQuestion,
+          partialAnswers,
+        ),
+        [],
+        false,
+      );
+      runtimeResult = {
+        assistantMessage: synthesisMessage,
+        messages,
+        toolRecords,
+        rounds: modelRounds + 1,
+        decomposition: {
+          enabled: true,
+          subquestionCount: complexPlan.subquestions.length,
+        },
+      };
+    } else {
+      runtimeResult = await runtime.run({
+        messages,
+        tools: toolGateway.asRuntimeTools(),
+        maxToolRounds: runPlan.maxToolRounds,
+        signal,
+        requestAssistant: (runtimeMessages, toolDefinitions) =>
+          requestAssistant(runtimeMessages, toolDefinitions, true),
+        onEvent: onRuntimeEvent,
+      });
+    }
     throwIfAborted(signal, "The AI request was cancelled.");
     for (const record of runtimeResult.toolRecords) {
       const sources = record.result.artifacts?.sources;
@@ -3447,10 +3604,20 @@ export default class AiReadingCompanionPlugin extends Plugin {
       webSearchRoute: runPlan.webSearchRoute,
       knowledgeScopePath: runPlan.knowledgeScopePath,
       maxToolRounds: runPlan.maxToolRounds,
+      complexQuestionMode: configuredComplexMode,
+      decomposedSubquestions:
+        runtimeResult.decomposition?.subquestionCount || 0,
     };
     assistantMessage.runtimeMetrics = {
       rounds: runtimeResult.rounds,
       toolCalls: runtimeResult.toolRecords.length,
+      toolAttempts: toolGateway.getDiagnostics().attempts,
+      toolSuccesses: toolGateway.getDiagnostics().successes,
+      toolBudgetDenials: toolGateway.getDiagnostics().budgetDenials,
+      toolCacheHits: toolGateway.getDiagnostics().cacheHits,
+      toolDiagnostics: toolGateway.getDiagnostics().tools,
+      decomposedSubquestions:
+        runtimeResult.decomposition?.subquestionCount || 0,
     };
     return returnFullMessage ? assistantMessage : assistantMessage.content;
   }
@@ -6901,6 +7068,29 @@ class AiReadingCompanionSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.aiAutoSelectImages === true)
           .onChange(async (value) => {
             this.plugin.settings.aiAutoSelectImages = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName(t("Complex question handling"))
+      .setDesc(
+        t(
+          "Automatically split clearly multi-part questions into 2-3 focused investigations, then synthesize one answer. All parts share one tool budget and evidence cache. Planning and synthesis add model calls. Provider-hosted web search currently uses the direct-answer path because its server-side tool budget cannot be controlled here.",
+        ),
+      )
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption("off", t("Off — always answer directly"))
+          .addOption(
+            "auto",
+            t("Automatic — split only clear multi-part questions"),
+          )
+          .addOption("always", t("Always evaluate — let the planner decide"))
+          .setValue(this.plugin.settings.complexQuestionMode || "auto")
+          .onChange(async (value) => {
+            this.plugin.settings.complexQuestionMode =
+              value === "off" || value === "always" ? value : "auto";
             await this.plugin.saveSettings();
           });
       });

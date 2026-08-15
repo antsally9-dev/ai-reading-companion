@@ -8,8 +8,10 @@ import {
   type KnowledgeIdentity,
 } from "./knowledge-identity";
 
-const MAX_SCOPE_RESULTS = 8;
+export const MAX_KNOWLEDGE_SEARCH_CALLS = 2;
+export const MAX_KNOWLEDGE_READ_CALLS = 2;
 const MAX_READ_REFS = 3;
+const MAX_SCOPE_RESULTS = MAX_KNOWLEDGE_READ_CALLS * MAX_READ_REFS;
 const MAX_PASSAGE_CHARACTERS = 6000;
 const MAX_TOTAL_READ_CHARACTERS = 16000;
 const MAX_INDEX_FILES = 300;
@@ -270,6 +272,19 @@ function scorePassage(passage: { heading: string; content: string }, query: stri
   return score;
 }
 
+function normalizedQuery(value: string) {
+  return queryTerms(value).sort().join("|");
+}
+
+function contentFingerprint(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 export class KnowledgeScopeRetriever {
   private app: App;
   private scopePath: string;
@@ -277,6 +292,12 @@ export class KnowledgeScopeRetriever {
   private signal?: AbortSignal;
   private nextSourceRef = 1;
   private sourceRefs = new Map<string, SourceReference>();
+  private sourceRefByKey = new Map<string, string>();
+  private searchCache = new Map<string, KnowledgeScopeSearchResult[]>();
+  private markdownCache = new Map<string, { mtime: number; markdown: string }>();
+  private passageCache = new Map<string, { block: string; evidenceKey: string }>();
+  private emittedEvidenceKeys = new Set<string>();
+  private totalReadCharacters = 0;
   private usedSources = new Map<
     string,
     {
@@ -369,6 +390,12 @@ export class KnowledgeScopeRetriever {
 
   async search(query: string, limit = MAX_SCOPE_RESULTS) {
     throwIfAborted(this.signal, "Local knowledge search was cancelled.");
+    const boundedLimit = Math.min(MAX_SCOPE_RESULTS, Math.max(1, limit));
+    const searchKey = `${normalizedQuery(query)}:${boundedLimit}`;
+    const cachedResults = this.searchCache.get(searchKey);
+    if (cachedResults) {
+      return cachedResults.map((result) => ({ ...result }));
+    }
     const files = this.app.vault
       .getMarkdownFiles()
       .filter(
@@ -399,18 +426,24 @@ export class KnowledgeScopeRetriever {
       );
     const balancedCandidates = balanceIdentityLanes(
       candidates,
-      Math.min(MAX_SCOPE_RESULTS, Math.max(1, limit)),
+      boundedLimit,
     );
 
     const results: KnowledgeScopeSearchResult[] = balancedCandidates.map((candidate) => {
-      const sourceRef = `scope-source-${this.nextSourceRef++}`;
-      this.sourceRefs.set(sourceRef, {
-        file: candidate.file,
-        query,
-        mtime: candidate.file.stat?.mtime || 0,
-        identity: candidate.identity,
-        epistemicStatus: candidate.epistemicStatus,
-      });
+      const mtime = candidate.file.stat?.mtime || 0;
+      const referenceKey = `${candidate.file.path}:${mtime}:${normalizedQuery(query)}`;
+      let sourceRef = this.sourceRefByKey.get(referenceKey);
+      if (!sourceRef) {
+        sourceRef = `scope-source-${this.nextSourceRef++}`;
+        this.sourceRefByKey.set(referenceKey, sourceRef);
+        this.sourceRefs.set(sourceRef, {
+          file: candidate.file,
+          query,
+          mtime,
+          identity: candidate.identity,
+          epistemicStatus: candidate.epistemicStatus,
+        });
+      }
       return {
         sourceRef,
         path: candidate.file.path,
@@ -423,13 +456,13 @@ export class KnowledgeScopeRetriever {
         epistemicStatus: candidate.epistemicStatus,
       };
     });
+    this.searchCache.set(searchKey, results.map((result) => ({ ...result })));
     return results;
   }
 
   async read(sourceRefs: string[]) {
     const uniqueRefs = [...new Set(sourceRefs)].slice(0, MAX_READ_REFS);
     const blocks: string[] = [];
-    let totalCharacters = 0;
     for (const sourceRef of uniqueRefs) {
       throwIfAborted(this.signal, "Local knowledge reading was cancelled.");
       const reference = this.sourceRefs.get(sourceRef);
@@ -442,23 +475,41 @@ export class KnowledgeScopeRetriever {
       ) {
         throw new Error(`Local source changed or left the allowed scope: ${sourceRef}`);
       }
-      const markdown = await raceWithAbort(
-        this.app.vault.cachedRead(reference.file),
-        this.signal,
-        "Local knowledge reading was cancelled.",
-      );
+      const cachedPassage = this.passageCache.get(sourceRef);
+      if (cachedPassage) {
+        if (!this.emittedEvidenceKeys.has(cachedPassage.evidenceKey)) {
+          this.emittedEvidenceKeys.add(cachedPassage.evidenceKey);
+          blocks.push(cachedPassage.block);
+        }
+        continue;
+      }
+      const cachedMarkdown = this.markdownCache.get(reference.file.path);
+      const markdown =
+        cachedMarkdown?.mtime === reference.mtime
+          ? cachedMarkdown.markdown
+          : await raceWithAbort(
+              this.app.vault.cachedRead(reference.file),
+              this.signal,
+              "Local knowledge reading was cancelled.",
+            );
+      if (cachedMarkdown?.mtime !== reference.mtime) {
+        this.markdownCache.set(reference.file.path, {
+          mtime: reference.mtime,
+          markdown,
+        });
+      }
       const passage = splitMarkdownPassages(markdown)
         .map((item) => ({ ...item, score: scorePassage(item, reference.query) }))
         .sort((left, right) => right.score - left.score)[0];
       if (!passage || passage.score <= 0) {
         continue;
       }
-      const remaining = MAX_TOTAL_READ_CHARACTERS - totalCharacters;
+      const remaining = MAX_TOTAL_READ_CHARACTERS - this.totalReadCharacters;
       if (remaining <= 0) {
         break;
       }
       const content = passage.content.slice(0, remaining);
-      totalCharacters += content.length;
+      this.totalReadCharacters += content.length;
       const link = passage.heading
         ? `[[${reference.file.path}#${passage.heading}|${reference.file.basename} › ${passage.heading}]]`
         : `[[${reference.file.path}|${reference.file.basename}]]`;
@@ -468,16 +519,27 @@ export class KnowledgeScopeRetriever {
         identity: reference.identity,
         epistemicStatus: reference.epistemicStatus,
       });
-      blocks.push(
-        [
-          `Source: ${link}`,
-          `Identity: ${reference.identity}`,
-          `Epistemic status: ${reference.epistemicStatus}`,
-          content,
-        ].join("\n"),
-      );
+      const block = [
+        `Source: ${link}`,
+        `Identity: ${reference.identity}`,
+        `Epistemic status: ${reference.epistemicStatus}`,
+        content,
+      ].join("\n");
+      const evidenceKey = [
+        reference.file.path,
+        reference.mtime,
+        passage.heading,
+        contentFingerprint(content),
+      ].join(":");
+      this.passageCache.set(sourceRef, { block, evidenceKey });
+      if (!this.emittedEvidenceKeys.has(evidenceKey)) {
+        this.emittedEvidenceKeys.add(evidenceKey);
+        blocks.push(block);
+      }
     }
-    return blocks.join("\n\n---\n\n");
+    return blocks.length
+      ? blocks.join("\n\n---\n\n")
+      : "The requested local passages were already supplied earlier in this run, or the shared local evidence character budget has been reached. Reuse the existing evidence.";
   }
 
   getUsedSources() {

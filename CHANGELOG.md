@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Aligned folder-search candidates with the local passage read budget (`6 = 3 × 2`).
+- Added run-scoped tool-result deduplication, shared local passage caching, and a shared local evidence character budget.
+- Changed tool call-budget exhaustion from a fatal request error into a recoverable tool-unavailable result; the exhausted tool is withdrawn and the model must finish from existing evidence.
+- Added privacy-preserving tool diagnostics: attempts, successes, cache hits, and budget denials by tool name, without query text, arguments, paths, URLs, or response bodies.
+- Added configurable complex-question handling. Clearly multi-part questions can be planned into 2–3 focused investigations that share one parent tool budget and evidence cache, followed by a tool-free synthesis pass.
 - Moved bounded conversations, learning-preference memory, and runtime diagnostics into Obsidian's official plugin `data.json` persistence path with serialized writes and one-time migration from the three legacy JSON files.
 - Added a Local data and privacy settings section with explicit retention limits, review shortcuts, and a clear-all action that preserves model, search, and saving configuration.
 - Added a frozen per-request Run Plan with separate desktop/mobile text, image, tool, round, and timeout budgets.

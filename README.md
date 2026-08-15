@@ -24,6 +24,8 @@ The conversation, reasoning output, search results, and unselected answer text a
 - Bounded retrieval of related historical questions without replaying old AI answers as evidence.
 - Candidate-based learning-preference memory: only repeated, explicit preference signals become reviewable, and only preferences you confirm affect future answer style.
 - A local runtime-diagnostics summary for latency, failures, cancellation, context trimming, and source/tool counts; diagnostic records contain no note text, questions, answers, paths, URLs, or credentials.
+- Run-scoped tool deduplication and shared evidence caching, with call-budget exhaustion degraded into a tool-unavailable result so the model can still finish from existing material.
+- Configurable complex-question handling that can split a clear multi-part question into 2–3 focused investigations sharing one parent tool budget, then synthesize one tool-free final answer.
 - A visible Stop action, request timeout, lifecycle status, and per-tool call/result budgets.
 - Review and edit a web-source excerpt before saving it to a configurable inbox; existing notes are never overwritten.
 - Save confirmed excerpts to the source note or a configurable central note.

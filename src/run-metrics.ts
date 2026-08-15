@@ -20,6 +20,18 @@ export interface AgentRunMetric {
   webSourceCount: number;
   modelRounds: number;
   toolCalls: number;
+  toolAttempts?: number;
+  toolSuccesses?: number;
+  toolBudgetDenials?: number;
+  toolCacheHits?: number;
+  decomposedSubquestions?: number;
+  toolDiagnostics?: Array<{
+    toolName: string;
+    attempts: number;
+    successes: number;
+    budgetDenials: number;
+    cacheHits: number;
+  }>;
 }
 
 interface MetricsEnvelope {
@@ -126,6 +138,26 @@ export class RunMetricsStore {
               metrics.length,
           )
         : 0,
+      toolAttempts: metrics.reduce(
+        (total, metric) => total + Number(metric.toolAttempts || 0),
+        0,
+      ),
+      toolSuccesses: metrics.reduce(
+        (total, metric) => total + Number(metric.toolSuccesses || 0),
+        0,
+      ),
+      toolBudgetDenials: metrics.reduce(
+        (total, metric) => total + Number(metric.toolBudgetDenials || 0),
+        0,
+      ),
+      toolCacheHits: metrics.reduce(
+        (total, metric) => total + Number(metric.toolCacheHits || 0),
+        0,
+      ),
+      decomposedSubquestions: metrics.reduce(
+        (total, metric) => total + Number(metric.decomposedSubquestions || 0),
+        0,
+      ),
       errors: [...errors.entries()].sort((left, right) => right[1] - left[1]),
     };
   }

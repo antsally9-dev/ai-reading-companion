@@ -124,7 +124,10 @@ const {
   findKnowledgeScopeForFile,
   makeResponsesUrl,
   pathIsWithinScope,
+  parseComplexQuestionPlan,
+  questionLooksComplex,
   searchHistoricalQuestions,
+  shouldPlanComplexQuestion,
 } = compiledModule.exports;
 assert.equal(typeof AgentRuntime, "function");
 assert.equal(typeof ContextBuilder, "function");
@@ -140,6 +143,19 @@ assert.equal(typeof KnowledgeScopeRetriever, "function");
 assert.equal(typeof buildResponsesRequestBody, "function");
 assert.equal(typeof extractResponsesAssistantMessage, "function");
 assert.equal(makeResponsesUrl("https://example.com/v1/chat/completions"), "https://example.com/v1/responses");
+assert.equal(
+  questionLooksComplex(
+    "先解释不同类型的工具在整个 Agent 中的调用位置和使用流程是什么？另外，Codex 和 Claude Code 的 ask user questions 是普通工具吗？最后，plan 工具又是怎么运行和参与控制的？",
+  ),
+  true,
+);
+assert.equal(shouldPlanComplexQuestion("A short question?", "auto"), false);
+assert.deepEqual(
+  parseComplexQuestionPlan(
+    '```json\n{"should_decompose":true,"rationale":"three concerns","subquestions":["工具在哪里调用？","ask user 如何工作？","plan 如何工作？","多余问题"]}\n```',
+  ).subquestions,
+  ["工具在哪里调用？", "ask user 如何工作？", "plan 如何工作？"],
+);
 
 const mobileRunPlan = createAgentRunPlan({
   mobile: true,
@@ -387,11 +403,26 @@ await metricsStore.append({
   webSourceCount: 1,
   modelRounds: 1,
   toolCalls: 0,
+  toolAttempts: 3,
+  toolSuccesses: 2,
+  toolBudgetDenials: 1,
+  toolCacheHits: 0,
+  toolDiagnostics: [
+    {
+      toolName: "ReadKnowledgePassages",
+      attempts: 3,
+      successes: 2,
+      budgetDenials: 1,
+      cacheHits: 0,
+    },
+  ],
 });
 const metricSummary = await metricsStore.summarize();
 assert.equal(metricSummary.count, 1);
 assert.equal(metricSummary.completed, 1);
 assert.equal(metricSummary.trimmingRate, 1);
+assert.equal(metricSummary.toolAttempts, 3);
+assert.equal(metricSummary.toolBudgetDenials, 1);
 
 const runEvents = [];
 const runController = new RunController();
@@ -443,6 +474,51 @@ await assert.rejects(
   /call budget/,
 );
 assert.equal(guardedToolCalls.length, 1);
+const cacheGateway = new ToolGateway({
+  tools: [
+    {
+      definition: {
+        type: "function",
+        function: { name: "Cached", parameters: { type: "object" } },
+      },
+      execute: async () => ({ content: "shared evidence" }),
+    },
+  ],
+  grants: [
+    {
+      id: "cache-grant",
+      toolName: "Cached",
+      maxCalls: 1,
+      maxResultCharacters: 100,
+    },
+  ],
+});
+const cachedTool = cacheGateway.asRuntimeTools()[0];
+assert.equal(
+  (await cachedTool.execute({ b: 2, a: 1 }, { toolCallId: "c1", round: 0 }))
+    .content,
+  "shared evidence",
+);
+assert.match(
+  (await cachedTool.execute({ a: 1, b: 2 }, { toolCallId: "c2", round: 1 }))
+    .content,
+  /already completed/i,
+);
+assert.deepEqual(cacheGateway.getDiagnostics(), {
+  attempts: 2,
+  successes: 1,
+  budgetDenials: 0,
+  cacheHits: 1,
+  tools: [
+    {
+      toolName: "Cached",
+      attempts: 2,
+      successes: 1,
+      budgetDenials: 0,
+      cacheHits: 1,
+    },
+  ],
+});
 const deniedGateway = new ToolGateway({
   tools: [
     {
@@ -546,7 +622,7 @@ const laneFiles = [
     stat: { mtime: 1 },
     identity: "personal_knowledge",
   },
-  ...Array.from({ length: 4 }, (_, index) => ({
+  ...Array.from({ length: 7 }, (_, index) => ({
     path: `Knowledge/AI/imported-${index + 1}.md`,
     basename: `memory-update-imported-${index + 1}`,
     stat: { mtime: 10 + index },
@@ -576,6 +652,11 @@ assert.equal(laneMatches.length, 3);
 assert.ok(
   laneMatches.some((match) => match.identity === "personal_knowledge"),
   "personal knowledge must retain a lane when external material scores higher",
+);
+assert.equal(
+  (await laneRetriever.search("memory update")).length,
+  6,
+  "the default candidate count must fit two reads of three refs each",
 );
 const cacheBoundFiles = Array.from({ length: 120 }, (_, index) => ({
   path: `Knowledge/Bounded/note-${index}.md`,
@@ -675,6 +756,59 @@ assert.deepEqual(runtimeEvents, [
   "model_response",
   "runtime_complete",
 ]);
+
+let degradedModelRound = 0;
+const degradedGateway = new ToolGateway({
+  tools: [
+    {
+      definition: {
+        type: "function",
+        function: { name: "Limited", parameters: { type: "object" } },
+      },
+      execute: async (arguments_) => ({ content: `Evidence ${arguments_.value}` }),
+    },
+  ],
+  grants: [
+    {
+      id: "limited-grant",
+      toolName: "Limited",
+      maxCalls: 1,
+      maxResultCharacters: 100,
+    },
+  ],
+});
+const degradedRuntimeResult = await new AgentRuntime().run({
+  messages: [{ role: "user", content: "Use limited evidence, then answer." }],
+  tools: degradedGateway.asRuntimeTools(),
+  maxToolRounds: 3,
+  requestAssistant: async (messages, definitions) => {
+    degradedModelRound += 1;
+    if (degradedModelRound <= 2) {
+      return {
+        role: "assistant",
+        content: "",
+        tool_calls: [
+          {
+            id: `limited-${degradedModelRound}`,
+            type: "function",
+            function: {
+              name: "Limited",
+              arguments: JSON.stringify({ value: degradedModelRound }),
+            },
+          },
+        ],
+      };
+    }
+    assert.equal(definitions.length, 0, "exhausted tools must be withdrawn");
+    assert.match(messages.at(-1).content, /unavailable for the remainder/i);
+    return { role: "assistant", content: "Completed with existing evidence." };
+  },
+});
+assert.equal(
+  degradedRuntimeResult.assistantMessage.content,
+  "Completed with existing evidence.",
+);
+assert.equal(degradedGateway.getDiagnostics().budgetDenials, 1);
 
 const plugin = new AiReadingCompanionPlugin();
 
@@ -1097,6 +1231,41 @@ assert.equal(genericAnswer, "Grounded answer");
 assert.equal(genericRequests[0].url, "https://example.com/v1/chat/completions");
 assert.equal(genericRequests[0].headers.Authorization, "Bearer test-only-key");
 assert.equal("tools" in JSON.parse(genericRequests[0].body), false);
+
+const complexRequests = [];
+requestHandler = async (options) => {
+  complexRequests.push(JSON.parse(options.body));
+  const index = complexRequests.length;
+  const contents = [
+    JSON.stringify({
+      should_decompose: true,
+      rationale: "two independent concerns",
+      subquestions: ["How does the first mechanism work?", "How does the second mechanism work?"],
+    }),
+    "First focused analysis.",
+    "Second focused analysis.",
+    "Synthesized complex answer.",
+  ];
+  return {
+    status: 200,
+    json: { choices: [{ message: { content: contents[index - 1] } }] },
+  };
+};
+plugin.settings.complexQuestionMode = "always";
+plugin.settings.localKnowledgeEnabled = false;
+const complexAnswer = await plugin.askAi(
+  { excerpt: "Selected passage" },
+  "Explain the first mechanism and its execution flow. Also explain the second mechanism and how it differs from the first one.",
+  [],
+  true,
+  false,
+);
+assert.equal(complexAnswer.content, "Synthesized complex answer.");
+assert.equal(complexAnswer.runtimeMetrics.decomposedSubquestions, 2);
+assert.equal(complexAnswer.runtimeMetrics.rounds, 4);
+assert.equal(complexRequests.length, 4);
+assert.equal("tools" in complexRequests.at(-1), false);
+plugin.settings.complexQuestionMode = "auto";
 
 const responsesRequests = [];
 requestHandler = async (options) => {
