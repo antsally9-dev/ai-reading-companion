@@ -7,8 +7,6 @@
 
 # npm
 node_modules
-apps/desktop/out/
-apps/desktop/desktop-alpha.png
 *.tsbuildinfo
 
 # Don't include the compiled main.js file in the repo.

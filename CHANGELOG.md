@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.2.1
+
+- Moved the standalone desktop app and its shared document package to a separate repository, [ai-reading-companion-desktop](https://github.com/antsally9-dev/ai-reading-companion-desktop). This repository now contains the Obsidian plugin only. No plugin behavior changes.
+
+## 1.2.0
 
 - Hardened page fetching so only exact HTTPS URLs returned by the current trusted search run can be fetched; direct client fetching now fails closed when the host cannot validate DNS and every redirect hop.
 - Isolated model context to the active conversation branch, preventing sibling questions and answers from leaking into one another.
