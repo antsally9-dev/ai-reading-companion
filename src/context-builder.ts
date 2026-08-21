@@ -152,6 +152,8 @@ function compactMessages(messages: any[], limit: number) {
   return truncateText(lines.join("\n"), limit);
 }
 
+const MAX_RECENT_CONVERSATION_MESSAGES = 6;
+
 function selectConversation(messages: any[], budget: number, compactionBudget: number) {
   const normalized = (messages || [])
     .filter(
@@ -173,6 +175,9 @@ function selectConversation(messages: any[], budget: number, compactionBudget: n
   );
   const recentBudget = Math.max(0, budget - reservedForCompaction);
   for (let index = normalized.length - 1; index >= 0; index -= 1) {
+    if (recent.length >= MAX_RECENT_CONVERSATION_MESSAGES) {
+      break;
+    }
     const message = normalized[index];
     const length = message.content.length;
     if (recent.length && used + length > recentBudget) {

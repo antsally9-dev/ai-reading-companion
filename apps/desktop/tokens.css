@@ -1,0 +1,36 @@
+:root {
+  color-scheme: light;
+  --font-sans: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: Bahnschrift, "Segoe UI Variable Display", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --color-canvas: oklch(98.4% 0.006 255);
+  --color-panel: oklch(99.4% 0.003 255);
+  --color-panel-subtle: oklch(96.7% 0.009 255);
+  --color-ink: oklch(25% 0.025 260);
+  --color-ink-muted: oklch(52% 0.025 260);
+  --color-border: oklch(89% 0.014 255);
+  --color-border-strong: oklch(79% 0.027 255);
+  --color-accent: oklch(56% 0.19 260);
+  --color-accent-ink: oklch(99.4% 0.003 255);
+  --color-accent-soft: oklch(94.2% 0.034 260);
+  --color-accent-strong: oklch(42% 0.18 260);
+  --color-focus: oklch(48% 0.21 260);
+  --color-positive: oklch(54% 0.13 160);
+  --color-warning: oklch(67% 0.15 70);
+  --shadow-panel: 0 1px 2px oklch(25% 0.025 260 / 0.05), 0 10px 32px oklch(25% 0.025 260 / 0.04);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --reader-width: 760px;
+  --control-height: 44px;
+  --dur-fast: 120ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: var(--dur-fast) var(--ease-out);
+}

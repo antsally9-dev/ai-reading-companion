@@ -11,18 +11,23 @@ export interface AgentToolExecutionResult {
 
 export class RecoverableToolUnavailableError extends Error {
   toolName: string;
-  reason: "budget_exhausted";
+  reason: "budget_exhausted" | "evidence_budget_exhausted";
 
-  constructor(toolName: string, message: string) {
+  constructor(
+    toolName: string,
+    message: string,
+    reason: RecoverableToolUnavailableError["reason"] = "budget_exhausted",
+  ) {
     super(message);
     this.name = "RecoverableToolUnavailableError";
     this.toolName = toolName;
-    this.reason = "budget_exhausted";
+    this.reason = reason;
   }
 }
 
 export interface AgentRuntimeTool {
   definition: Record<string, any>;
+  isAvailable?: () => boolean;
   execute: (
     arguments_: Record<string, any>,
     context: AgentToolExecutionContext,
@@ -137,7 +142,10 @@ export class AgentRuntime {
     for (let round = 0; round <= maxToolRounds; round += 1) {
       throwIfAborted(options.signal);
       const toolDefinitions = [...toolRegistry.entries()]
-        .filter(([name]) => !unavailableTools.has(name))
+        .filter(
+          ([name, tool]) =>
+            !unavailableTools.has(name) && tool.isAvailable?.() !== false,
+        )
         .map(([, tool]) => tool.definition);
       const assistantMessage = await options.requestAssistant(
         messages,
@@ -192,7 +200,8 @@ export class AgentRuntime {
           arguments: arguments_,
         });
         let result: AgentToolExecutionResult;
-        if (unavailableTools.has(toolName)) {
+        if (unavailableTools.has(toolName) || tool.isAvailable?.() === false) {
+          unavailableTools.add(toolName);
           result = unavailableResult(toolName);
         } else {
           try {
@@ -206,7 +215,10 @@ export class AgentRuntime {
               throw error;
             }
             unavailableTools.add(error.toolName || toolName);
-            result = unavailableResult(error.toolName || toolName);
+            result = unavailableResult(
+              error.toolName || toolName,
+              error.reason,
+            );
             await options.onEvent?.({
               type: "tool_unavailable",
               round,
@@ -252,15 +264,18 @@ export class AgentRuntime {
   }
 }
 
-function unavailableResult(toolName: string): AgentToolExecutionResult {
+function unavailableResult(
+  toolName: string,
+  reason: RecoverableToolUnavailableError["reason"] = "budget_exhausted",
+): AgentToolExecutionResult {
   return {
     content: [
-      `${toolName} is unavailable for the remainder of this run because its call budget was exhausted.`,
+      `${toolName} is unavailable for the remainder of this run because a tool budget was exhausted.`,
       "Do not request this tool again. Complete the answer using the selected passage, conversation, and evidence already returned by other tools. Clearly state any remaining uncertainty.",
     ].join(" "),
     artifacts: {
       toolUnavailable: true,
-      reason: "budget_exhausted",
+      reason,
     },
   };
 }

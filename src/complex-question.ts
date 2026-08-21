@@ -37,7 +37,7 @@ function uniqueQuestions(values: unknown[]) {
 
 export function questionLooksComplex(question: string) {
   const normalized = normalizeQuestion(question);
-  if (normalized.length < 80) {
+  if (normalized.length < 160) {
     return false;
   }
   const questionMarks = (normalized.match(/[?？]/g) || []).length;
@@ -49,7 +49,11 @@ export function questionLooksComplex(question: string) {
       /另外|除此之外|同时|分别|以及|然后|最后|first|second|also|in addition|respectively/gi,
     ) || []
   ).length;
-  return questionMarks >= 2 || enumeratedParts >= 2 || connectiveParts >= 2;
+  return (
+    questionMarks >= 3 ||
+    enumeratedParts >= 2 ||
+    (questionMarks >= 2 && connectiveParts >= 2)
+  );
 }
 
 export function shouldPlanComplexQuestion(

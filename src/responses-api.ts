@@ -141,6 +141,7 @@ export function buildResponsesRequestBody(options: {
   messages: any[];
   toolDefinitions?: Record<string, any>[];
   hostedWebSearchType?: HostedWebSearchType;
+  maxOutputTokens?: number;
 }) {
   const converted = toResponsesInput(options.messages);
   const tools: any[] = toResponsesFunctionTools(
@@ -156,6 +157,10 @@ export function buildResponsesRequestBody(options: {
       ? { instructions: converted.instructions }
       : {}),
     input: converted.input,
+    ...(Number.isFinite(options.maxOutputTokens) &&
+    Number(options.maxOutputTokens) > 0
+      ? { max_output_tokens: Math.floor(Number(options.maxOutputTokens)) }
+      : {}),
     ...(tools.length ? { tools, tool_choice: "auto" } : {}),
   };
 }

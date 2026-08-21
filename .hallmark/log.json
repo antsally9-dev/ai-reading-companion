@@ -1,0 +1,12 @@
+[
+  {
+    "date": "2026-08-20",
+    "scope": "Obsidian desktop plugin conversation workspace",
+    "macrostructure": "Workbench",
+    "genre": "modern-minimal",
+    "tone": "technical/utilitarian",
+    "theme": "Obsidian host tokens with restrained orange emphasis",
+    "enrichment": "none",
+    "structuralFingerprint": "conversation drawer + single-scroll knowledge rail + narrow continuous answer column"
+  }
+]

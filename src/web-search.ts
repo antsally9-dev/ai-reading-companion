@@ -1,5 +1,5 @@
-import { requestUrl } from "obsidian";
 import { raceWithAbort, throwIfAborted } from "./abort";
+import type { HttpClient, HttpRequest } from "./platform-http";
 
 export interface WebSearchProviderPreset {
   label: string;
@@ -108,6 +108,7 @@ export interface WebSource {
 }
 
 export interface WebSearchRuntimeConfig {
+  httpClient: HttpClient;
   provider: WebSearchProvider;
   endpoint: string;
   apiKey: string;
@@ -117,15 +118,24 @@ export interface WebSearchRuntimeConfig {
   toolCallId?: string;
   mcpToolName?: string;
   mcpQueryArgument?: string;
+  /**
+   * URLs returned by a search provider during the current Agent run. FetchURL
+   * must never become an arbitrary network client controlled by model output.
+   */
+  allowedFetchUrls?: Iterable<string>;
   signal?: AbortSignal;
 }
 
 const MAX_FETCH_CHARACTERS = 24000;
+const MAX_FETCH_RESPONSE_BYTES = 1024 * 1024;
 
-async function requestWithSignal(config: WebSearchRuntimeConfig, options: any) {
+async function requestWithSignal(
+  config: WebSearchRuntimeConfig,
+  options: HttpRequest,
+) {
   throwIfAborted(config.signal, "The web request was cancelled.");
   const response = await raceWithAbort(
-    requestUrl(options),
+    config.httpClient.request({ ...options, signal: config.signal }),
     config.signal,
     "The web request was cancelled.",
   );
@@ -183,8 +193,10 @@ function hostnameFromUrl(url: string) {
 }
 
 function normalizeSource(source: Partial<WebSource>): WebSource | null {
-  const url = String(source.url || "").trim();
-  if (!/^https?:\/\//i.test(url)) {
+  let url = "";
+  try {
+    url = canonicalizeSearchResultUrl(String(source.url || "").trim());
+  } catch {
     return null;
   }
   const siteName = String(source.siteName || "").trim() || hostnameFromUrl(url);
@@ -282,16 +294,16 @@ function parseJsonRpcResponse(response: any, requestId: number) {
 }
 
 async function postMcpMessage(
+  config: WebSearchRuntimeConfig,
   endpoint: string,
   apiKey: string,
   payload: Record<string, any>,
   sessionId = "",
   protocolVersion = "2025-03-26",
-  signal?: AbortSignal,
 ) {
-  throwIfAborted(signal, "The Remote MCP request was cancelled.");
-  const response = await raceWithAbort(
-    requestUrl({
+  const response = await requestWithSignal(
+    config,
+    {
       url: endpoint,
       method: "POST",
       headers: {
@@ -301,13 +313,9 @@ async function postMcpMessage(
         ...(sessionId ? { "Mcp-Session-Id": sessionId } : {}),
         "MCP-Protocol-Version": protocolVersion,
       },
-      throw: false,
       body: JSON.stringify(payload),
-    }),
-    signal,
-    "The Remote MCP request was cancelled.",
+    },
   );
-  throwIfAborted(signal, "The Remote MCP request was cancelled.");
   if (response.status < 200 || response.status >= 300) {
     const detail = String(response.text || "").trim().slice(0, 300);
     throw new Error(
@@ -376,6 +384,7 @@ async function searchRemoteMcp(
   );
   const initializeId = 1;
   const initializeResponse = await postMcpMessage(
+    config,
     endpoint,
     config.apiKey,
     {
@@ -393,7 +402,6 @@ async function searchRemoteMcp(
     },
     "",
     "2025-03-26",
-    config.signal,
   );
   const initializeBody = parseJsonRpcResponse(initializeResponse, initializeId);
   if (initializeBody?.error) {
@@ -406,12 +414,12 @@ async function searchRemoteMcp(
   const protocolVersion =
     initializeBody?.result?.protocolVersion || "2025-03-26";
   await postMcpMessage(
+    config,
     endpoint,
     config.apiKey,
     { jsonrpc: "2.0", method: "notifications/initialized" },
     sessionId,
     protocolVersion,
-    config.signal,
   );
 
   const toolName = String(
@@ -424,6 +432,7 @@ async function searchRemoteMcp(
   ).trim();
   const callId = 2;
   const toolResponse = await postMcpMessage(
+    config,
     endpoint,
     config.apiKey,
     {
@@ -442,7 +451,6 @@ async function searchRemoteMcp(
     },
     sessionId,
     protocolVersion,
-    config.signal,
   );
   const toolBody = parseJsonRpcResponse(toolResponse, callId);
   if (toolBody?.error) {
@@ -502,7 +510,6 @@ export async function searchWeb(
           ? { "X-Msh-Tool-Call-Id": config.toolCallId }
           : {}),
       },
-      throw: false,
       body: JSON.stringify({ text_query: normalizedQuery }),
     });
     if (response.status < 200 || response.status >= 300) {
@@ -535,7 +542,6 @@ export async function searchWeb(
         "Content-Type": "application/json",
         Authorization: `Bearer ${config.apiKey}`,
       },
-      throw: false,
       body: JSON.stringify({
         query: normalizedQuery,
         search_depth: "basic",
@@ -575,7 +581,6 @@ export async function searchWeb(
         Accept: "application/json",
         "X-Subscription-Token": config.apiKey,
       },
-      throw: false,
     });
     if (response.status < 200 || response.status >= 300) {
       throwSearchError(provider, response);
@@ -604,7 +609,6 @@ export async function searchWeb(
         "Content-Type": "application/json",
         "x-api-key": config.apiKey,
       },
-      throw: false,
       body: JSON.stringify({
         query: normalizedQuery,
         type: "auto",
@@ -647,7 +651,6 @@ export async function searchWeb(
         "Content-Type": "application/json",
         "X-API-KEY": config.apiKey,
       },
-      throw: false,
       body: JSON.stringify({ q: normalizedQuery, num: limit }),
     });
     if (response.status < 200 || response.status >= 300) {
@@ -679,7 +682,6 @@ export async function searchWeb(
           ? { Authorization: `Bearer ${config.apiKey}` }
           : {}),
       },
-      throw: false,
     });
     if (response.status < 200 || response.status >= 300) {
       throwSearchError(provider, response);
@@ -709,7 +711,7 @@ export async function searchWeb(
   };
 }
 
-function isPrivateIpv4(hostname: string) {
+function isUnsafeIpv4(hostname: string) {
   const match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (!match) {
     return false;
@@ -718,17 +720,97 @@ function isPrivateIpv4(hostname: string) {
   if (parts.some((part) => part < 0 || part > 255)) {
     return true;
   }
-  return (
-    parts[0] === 10 ||
-    parts[0] === 127 ||
-    (parts[0] === 169 && parts[1] === 254) ||
-    (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
-    (parts[0] === 192 && parts[1] === 168) ||
-    parts[0] === 0
-  );
+  const value =
+    (((parts[0] * 256 + parts[1]) * 256 + parts[2]) * 256 + parts[3]) >>> 0;
+  const inRange = (network: number, prefix: number) => {
+    const mask = prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0;
+    return (value & mask) === (network & mask);
+  };
+  return [
+    [0x00000000, 8], // Current network and unspecified addresses.
+    [0x0a000000, 8], // RFC 1918.
+    [0x64400000, 10], // Carrier-grade NAT, including common metadata IPs.
+    [0x7f000000, 8], // Loopback.
+    [0xa9fe0000, 16], // Link-local and cloud instance metadata.
+    [0xac100000, 12], // RFC 1918.
+    [0xc0000000, 24], // IETF protocol assignments.
+    [0xc0000200, 24], // Documentation.
+    [0xc0586300, 24], // Deprecated relay anycast.
+    [0xc0a80000, 16], // RFC 1918.
+    [0xc6120000, 15], // Benchmark testing.
+    [0xc6336400, 24], // Documentation.
+    [0xcb007100, 24], // Documentation.
+    [0xe0000000, 4], // Multicast.
+    [0xf0000000, 4], // Reserved and broadcast.
+  ].some(([network, prefix]) => inRange(network, prefix));
 }
 
-function validatePublicPageUrl(value: string) {
+function isUnsafeIpv6(hostname: string) {
+  const host = hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (!host.includes(":")) {
+    return false;
+  }
+  if (host === "::" || host === "::1") {
+    return true;
+  }
+  const firstGroup = Number.parseInt(host.split(":", 1)[0] || "0", 16);
+  if (
+    (firstGroup & 0xfe00) === 0xfc00 || // Unique-local fc00::/7.
+    (firstGroup & 0xffc0) === 0xfe80 || // Link-local fe80::/10.
+    (firstGroup & 0xffc0) === 0xfec0 || // Deprecated site-local fec0::/10.
+    (firstGroup & 0xff00) === 0xff00 // Multicast ff00::/8.
+  ) {
+    return true;
+  }
+  // URL canonicalization renders IPv4-mapped literals in hexadecimal form.
+  if (/^::ffff:/i.test(host)) {
+    const tail = host.slice("::ffff:".length);
+    const groups = tail.split(":");
+    if (groups.length === 2) {
+      const upper = Number.parseInt(groups[0], 16);
+      const lower = Number.parseInt(groups[1], 16);
+      if (Number.isFinite(upper) && Number.isFinite(lower)) {
+        const ipv4 = [upper >>> 8, upper & 0xff, lower >>> 8, lower & 0xff].join(".");
+        return isUnsafeIpv4(ipv4);
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+function isUnsafeHostname(hostname: string) {
+  const normalized = hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "").toLowerCase();
+  if (!normalized) {
+    return true;
+  }
+  if (isUnsafeIpv4(normalized) || isUnsafeIpv6(normalized)) {
+    return true;
+  }
+  if (/^\d+(?:\.\d+){3}$/.test(normalized)) {
+    // A malformed IPv4-looking hostname is never a valid public fetch target.
+    return true;
+  }
+  if (
+    normalized === "localhost" ||
+    normalized === "instance-data" ||
+    normalized === "metadata" ||
+    normalized === "metadata.google.internal" ||
+    normalized.endsWith(".localhost") ||
+    normalized.endsWith(".local") ||
+    normalized.endsWith(".localdomain") ||
+    normalized.endsWith(".internal") ||
+    normalized.endsWith(".lan") ||
+    normalized.endsWith(".home")
+  ) {
+    return true;
+  }
+  // Single-label hostnames can be resolved through a machine's private search
+  // suffix and therefore cannot be treated as public Internet destinations.
+  return !normalized.includes(".") && !normalized.includes(":");
+}
+
+function canonicalizeSearchResultUrl(value: string) {
   let url: URL;
   try {
     url = new URL(value);
@@ -736,59 +818,106 @@ function validatePublicPageUrl(value: string) {
     throw new Error("Page fetch requires a valid HTTP or HTTPS URL.");
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("Page fetch only accepts HTTP or HTTPS URLs.");
+    throw new Error("Page fetch only accepts HTTP or HTTPS source URLs.");
   }
   if (url.username || url.password) {
     throw new Error("Page fetch does not accept URLs containing credentials.");
   }
+  const expectedPort = url.protocol === "https:" ? "443" : "80";
+  if (url.port && url.port !== expectedPort) {
+    throw new Error("Page fetch only accepts the standard HTTP or HTTPS port.");
+  }
   const hostname = url.hostname.toLowerCase();
-  const isIpv6 = hostname.includes(":");
-  if (
-    hostname === "localhost" ||
-    hostname.endsWith(".localhost") ||
-    hostname.endsWith(".local") ||
-    hostname === "::1" ||
-    (isIpv6 &&
-      (hostname.startsWith("fc") ||
-        hostname.startsWith("fd") ||
-        hostname.startsWith("fe80"))) ||
-    isPrivateIpv4(hostname)
-  ) {
+  if (isUnsafeHostname(hostname)) {
     throw new Error("Page fetch does not access local or private network addresses.");
   }
+  // Fragments are never sent to the server and must not create a second
+  // provenance identity for the same resource.
+  url.hash = "";
   return url.toString();
 }
 
-function htmlToReadableText(html: string) {
-  if (typeof DOMParser === "undefined") {
-    return html
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/gi, " ")
-      .replace(/&amp;/gi, "&")
-      .replace(/\s+/g, " ")
-      .trim();
+export function canonicalizePublicPageUrl(value: string) {
+  const normalized = canonicalizeSearchResultUrl(value);
+  const url = new URL(normalized);
+  if (url.protocol !== "https:") {
+    throw new Error("Page fetch only accepts HTTPS URLs.");
   }
-  const document = new DOMParser().parseFromString(html, "text/html");
-  for (const element of Array.from(
-    document.querySelectorAll("script, style, noscript, svg, nav, form"),
-  )) {
-    element.remove();
+  return normalized;
+}
+
+function requireSearchProvenance(
+  requestedUrl: string,
+  allowedFetchUrls: Iterable<string> | undefined,
+) {
+  if (!allowedFetchUrls) {
+    throw new Error(
+      "Page fetch is unavailable because this URL was not registered by web search in the current run.",
+    );
   }
-  const content =
-    document.querySelector("article, main") || document.body || document.documentElement;
-  return String(content?.textContent || "")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n\s*\n\s*\n+/g, "\n\n")
-    .trim();
+  for (const candidate of allowedFetchUrls) {
+    try {
+      if (canonicalizePublicPageUrl(String(candidate || "").trim()) === requestedUrl) {
+        return;
+      }
+    } catch {
+      // Invalid search results are ignored instead of expanding the allowlist.
+    }
+  }
+  throw new Error(
+    "Page fetch only accepts an exact URL returned by web search in the current run.",
+  );
+}
+
+function responseHeader(response: any, name: string) {
+  return headerValue(response?.headers, name);
+}
+
+function assertFetchResponseSize(response: any) {
+  const declaredLength = Number(responseHeader(response, "content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_FETCH_RESPONSE_BYTES) {
+    throw new Error("Page fetch response exceeded the 1 MiB safety limit.");
+  }
+  const arrayBufferBytes = Number(response?.arrayBuffer?.byteLength || 0);
+  if (arrayBufferBytes > MAX_FETCH_RESPONSE_BYTES) {
+    throw new Error("Page fetch response exceeded the 1 MiB safety limit.");
+  }
+  const responseText = String(response?.text || "");
+  const responseBytes =
+    typeof TextEncoder !== "undefined"
+      ? new TextEncoder().encode(responseText).byteLength
+      : responseText.length * 2;
+  if (responseBytes > MAX_FETCH_RESPONSE_BYTES) {
+    throw new Error("Page fetch response exceeded the 1 MiB safety limit.");
+  }
+}
+
+function assertTextualFetchResponse(response: any) {
+  const contentType = responseHeader(response, "content-type")
+    .split(";", 1)[0]
+    .trim()
+    .toLowerCase();
+  if (
+    contentType &&
+    !contentType.startsWith("text/") &&
+    ![
+      "application/json",
+      "application/ld+json",
+      "application/markdown",
+      "application/xhtml+xml",
+      "application/xml",
+    ].includes(contentType)
+  ) {
+    throw new Error(`Page fetch rejected a non-text response (${contentType}).`);
+  }
 }
 
 export async function fetchWebPage(
   config: WebSearchRuntimeConfig,
   pageUrl: string,
 ) {
-  const url = validatePublicPageUrl(String(pageUrl || "").trim());
+  const url = canonicalizePublicPageUrl(String(pageUrl || "").trim());
+  requireSearchProvenance(url, config.allowedFetchUrls);
   let pageContent = "";
 
   if (config.provider === "kimi") {
@@ -802,7 +931,6 @@ export async function fetchWebPage(
           ? { "X-Msh-Tool-Call-Id": config.toolCallId }
           : {}),
       },
-      throw: false,
       body: JSON.stringify({ url }),
     });
     if (response.status < 200 || response.status >= 300) {
@@ -811,30 +939,18 @@ export async function fetchWebPage(
         `Page fetch returned ${response.status}${detail ? `: ${detail}` : ""}`,
       );
     }
+    assertFetchResponseSize(response);
+    assertTextualFetchResponse(response);
     pageContent = String(response.text || "").trim();
   } else {
-    const response = await requestWithSignal(config, {
-      url,
-      method: "GET",
-      headers: {
-        Accept: "text/html, text/plain, application/json;q=0.8",
-      },
-      throw: false,
-    });
-    if (response.status < 200 || response.status >= 300) {
-      throw new Error(`Page fetch returned ${response.status}.`);
-    }
-    const contentType = String(
-      response.headers?.["content-type"] || response.headers?.["Content-Type"] || "",
-    ).toLowerCase();
-    const responseText = String(response.text || "").trim();
-    if (contentType.includes("text/html") || /<html[\s>]/i.test(responseText)) {
-      pageContent = htmlToReadableText(responseText);
-    } else if (contentType.includes("application/json")) {
-      pageContent = JSON.stringify(response.json || responseText, null, 2);
-    } else {
-      pageContent = responseText;
-    }
+    // The currently supported host transport follows redirects internally and
+    // does not expose a manual redirect mode or a trustworthy final URL. Direct fetching would
+    // therefore let a public allowlisted URL redirect to loopback, a private
+    // service, or cloud metadata without a per-hop check. Until a platform
+    // transport can resolve DNS and validate every redirect, fail closed.
+    throw new Error(
+      "Direct page fetch is disabled because this platform cannot validate every redirect hop and final URL. Use search snippets or a provider-hosted page fetch adapter.",
+    );
   }
 
   const truncated = pageContent.slice(0, MAX_FETCH_CHARACTERS);

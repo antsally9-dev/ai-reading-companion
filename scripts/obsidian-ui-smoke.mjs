@@ -218,6 +218,11 @@ const saved = await evaluate(`
         ),
         composerDraftPreserved:
           view.questionEl.value === "Unsent composer draft",
+        linkedQuestionMessageId: question.questionMessageId || null,
+        linkedAnswerMessageId: question.answerMessageId || null,
+        linkedTurnsPresent:
+          view.messages.some((message) => message.id === question.questionMessageId) &&
+          view.messages.some((message) => message.id === question.answerMessageId),
       };
     } finally {
       plugin.askAi = originalAskAi;

@@ -15,6 +15,8 @@ export interface ToolCallDiagnostic {
   successes: number;
   budgetDenials: number;
   cacheHits: number;
+  resultCharacters: number;
+  resultTruncations: number;
 }
 
 export interface ToolDiagnosticSummary {
@@ -22,6 +24,10 @@ export interface ToolDiagnosticSummary {
   successes: number;
   budgetDenials: number;
   cacheHits: number;
+  resultCharacters: number;
+  resultBudgetCharacters: number;
+  resultBudgetDenials: number;
+  resultTruncations: number;
   tools: ToolCallDiagnostic[];
 }
 
@@ -56,6 +62,7 @@ export interface ToolGatewayOptions {
     request: ToolPermissionRequest,
   ) => boolean | Promise<boolean>;
   onDiagnostic?: (summary: ToolDiagnosticSummary) => void;
+  maxTotalResultCharacters?: number;
 }
 
 export class ToolPermissionDeniedError extends Error {
@@ -70,6 +77,30 @@ export class ToolCallBudgetExceededError extends RecoverableToolUnavailableError
     super(toolName, `${toolName} exceeded its allowed call budget.`);
     this.name = "ToolCallBudgetExceededError";
   }
+}
+
+export class ToolEvidenceBudgetExceededError extends RecoverableToolUnavailableError {
+  constructor(toolName: string) {
+    super(
+      toolName,
+      `${toolName} could not run because the shared tool evidence budget was exhausted.`,
+      "evidence_budget_exhausted",
+    );
+    this.name = "ToolEvidenceBudgetExceededError";
+  }
+}
+
+function truncateToBudget(content: string, maxCharacters: number, notice: string) {
+  if (!maxCharacters || content.length <= maxCharacters) {
+    return content;
+  }
+  if (maxCharacters <= 3) {
+    return ".".repeat(maxCharacters);
+  }
+  if (maxCharacters <= notice.length) {
+    return `${notice.slice(0, maxCharacters - 3)}...`;
+  }
+  return `${content.slice(0, maxCharacters - notice.length)}${notice}`;
 }
 
 function stableValue(value: unknown): unknown {
@@ -104,12 +135,20 @@ export class ToolGateway {
   private evaluate?: ToolGatewayOptions["evaluate"];
   private requestPermission?: ToolGatewayOptions["requestPermission"];
   private onDiagnostic?: ToolGatewayOptions["onDiagnostic"];
+  private maxTotalResultCharacters: number;
+  private resultCharacters = 0;
+  private resultBudgetDenials = 0;
+  private resultTruncations = 0;
 
   constructor(options: ToolGatewayOptions) {
     this.signal = options.signal;
     this.evaluate = options.evaluate;
     this.requestPermission = options.requestPermission;
     this.onDiagnostic = options.onDiagnostic;
+    this.maxTotalResultCharacters = Math.max(
+      0,
+      Number(options.maxTotalResultCharacters || 0),
+    );
 
     for (const tool of options.tools) {
       const name = toolName(tool);
@@ -138,13 +177,24 @@ export class ToolGateway {
       successes: tools.reduce((total, item) => total + item.successes, 0),
       budgetDenials: tools.reduce((total, item) => total + item.budgetDenials, 0),
       cacheHits: tools.reduce((total, item) => total + item.cacheHits, 0),
+      resultCharacters: this.resultCharacters,
+      resultBudgetCharacters: this.maxTotalResultCharacters,
+      resultBudgetDenials: this.resultBudgetDenials,
+      resultTruncations: this.resultTruncations,
       tools,
     };
   }
 
   private recordDiagnostic(
     name: string,
-    field: "attempts" | "successes" | "budgetDenials" | "cacheHits",
+    field:
+      | "attempts"
+      | "successes"
+      | "budgetDenials"
+      | "cacheHits"
+      | "resultCharacters"
+      | "resultTruncations",
+    amount = 1,
   ) {
     const diagnostic = this.diagnostics.get(name) || {
       toolName: name,
@@ -152,8 +202,10 @@ export class ToolGateway {
       successes: 0,
       budgetDenials: 0,
       cacheHits: 0,
+      resultCharacters: 0,
+      resultTruncations: 0,
     };
-    diagnostic[field] += 1;
+    diagnostic[field] += amount;
     this.diagnostics.set(name, diagnostic);
     this.onDiagnostic?.(this.getDiagnostics());
   }
@@ -161,23 +213,33 @@ export class ToolGateway {
   asRuntimeTools(): AgentRuntimeTool[] {
     return [...this.tools.entries()].map(([name, tool]) => ({
       definition: tool.definition,
+      isAvailable: () => this.isToolAvailable(name),
       execute: (arguments_, context) =>
         this.execute(name, arguments_, context),
     }));
   }
 
+  private isToolAvailable(name: string) {
+    const grant = this.grants.get(name);
+    const evidenceBudgetAvailable =
+      !this.maxTotalResultCharacters ||
+      this.resultCharacters < this.maxTotalResultCharacters;
+    return Boolean(
+      grant &&
+        evidenceBudgetAvailable &&
+        (!grant.expiresAt || grant.expiresAt > Date.now()) &&
+        (this.callCounts.get(name) || 0) < Math.max(0, grant.maxCalls),
+    );
+  }
+
   asAvailableRuntimeTools(): AgentRuntimeTool[] {
     return [...this.tools.entries()]
       .filter(([name]) => {
-        const grant = this.grants.get(name);
-        return Boolean(
-          grant &&
-            (!grant.expiresAt || grant.expiresAt > Date.now()) &&
-            (this.callCounts.get(name) || 0) < Math.max(0, grant.maxCalls),
-        );
+        return this.isToolAvailable(name);
       })
       .map(([name, tool]) => ({
         definition: tool.definition,
+        isAvailable: () => this.isToolAvailable(name),
         execute: (arguments_, context) => this.execute(name, arguments_, context),
       }));
   }
@@ -222,6 +284,14 @@ export class ToolGateway {
       this.recordDiagnostic(name, "budgetDenials");
       throw new ToolCallBudgetExceededError(name);
     }
+    if (
+      this.maxTotalResultCharacters &&
+      this.resultCharacters >= this.maxTotalResultCharacters
+    ) {
+      this.recordDiagnostic(name, "budgetDenials");
+      this.resultBudgetDenials += 1;
+      throw new ToolEvidenceBudgetExceededError(name);
+    }
 
     const request: ToolPermissionRequest = {
       toolName: name,
@@ -263,13 +333,41 @@ export class ToolGateway {
         ? result.content
         : JSON.stringify(result?.content ?? "");
     const maxCharacters = Math.max(0, grant.maxResultCharacters || 0);
+    const individuallyBoundedContent = truncateToBudget(
+      content,
+      maxCharacters,
+      "\n\n[Tool result truncated by the permission budget.]",
+    );
+    const remainingSharedCharacters = this.maxTotalResultCharacters
+      ? Math.max(0, this.maxTotalResultCharacters - this.resultCharacters)
+      : 0;
+    const sharedBudgetTruncated = Boolean(
+      this.maxTotalResultCharacters &&
+        individuallyBoundedContent.length > remainingSharedCharacters,
+    );
+    const finalContent = sharedBudgetTruncated
+      ? truncateToBudget(
+          individuallyBoundedContent,
+          remainingSharedCharacters,
+          "\n\n[Tool result truncated by the shared evidence budget.]",
+        )
+      : individuallyBoundedContent;
     const normalizedResult = {
       ...result,
-      content:
-        maxCharacters && content.length > maxCharacters
-          ? `${content.slice(0, maxCharacters)}\n\n[Tool result truncated by the permission budget.]`
-          : content,
+      content: finalContent,
+      artifacts: {
+        ...(result?.artifacts || {}),
+        ...(sharedBudgetTruncated
+          ? { sharedEvidenceBudgetTruncated: true }
+          : {}),
+      },
     };
+    this.resultCharacters += finalContent.length;
+    this.recordDiagnostic(name, "resultCharacters", finalContent.length);
+    if (sharedBudgetTruncated) {
+      this.resultTruncations += 1;
+      this.recordDiagnostic(name, "resultTruncations");
+    }
     this.resultCache.set(cacheKey, normalizedResult);
     this.recordDiagnostic(name, "successes");
     return normalizedResult;

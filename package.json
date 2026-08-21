@@ -11,6 +11,10 @@
     "check:release": "node scripts/check-release.mjs",
     "test:smoke": "node scripts/smoke-test.mjs",
     "test:agent-ui": "node scripts/agent-ui-acceptance.mjs",
+    "desktop:dev": "npm --prefix apps/desktop run dev",
+    "desktop:build": "npm --prefix apps/desktop run build",
+    "desktop:test": "npm --prefix apps/desktop run test",
+    "desktop:verify": "npm --prefix apps/desktop run verify",
     "verify": "npm run lint && npm run build && npm run check:release && npm run test:smoke",
     "version": "node version-bump.mjs && git add manifest.json versions.json"
   },

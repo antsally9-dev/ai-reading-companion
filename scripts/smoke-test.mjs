@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import Module from "node:module";
 import { resolve } from "node:path";
+import { createJiti } from "jiti";
 
 let requestHandler = async () => {
   throw new Error("Unexpected network request in smoke test.");
@@ -101,8 +102,48 @@ try {
 
 const AiReadingCompanionPlugin =
   compiledModule.exports.default ?? compiledModule.exports;
+const jiti = createJiti(import.meta.url);
+const sourceModulePaths = [
+  "../src/agent-runtime.ts",
+  "../src/ask-question-use-case.ts",
+  "../src/complex-question.ts",
+  "../src/context-builder.ts",
+  "../src/conversation-branch.ts",
+  "../src/conversation-domain.ts",
+  "../src/external-prompt.ts",
+  "../src/knowledge-identity.ts",
+  "../src/memory-store.ts",
+  "../src/model-transport.ts",
+  "../src/plugin-data-store.ts",
+  "../src/question-routing.ts",
+  "../src/responses-api.ts",
+  "../src/run-controller.ts",
+  "../src/run-metrics.ts",
+  "../src/run-plan.ts",
+  "../src/session-store.ts",
+  "../src/tool-gateway.ts",
+  "../src/web-search.ts",
+];
+let sourceModules;
+Module._load = (request, parent, isMain) =>
+  request === "obsidian"
+    ? obsidianMock
+    : originalLoad(request, parent, isMain);
+try {
+  sourceModules = await Promise.all(
+    sourceModulePaths.map((path) => jiti.import(path)),
+  );
+} finally {
+  Module._load = originalLoad;
+}
+const sourceExports = Object.assign(
+  {},
+  ...sourceModules,
+  compiledModule.exports,
+);
 const {
   AgentRuntime,
+  AskQuestionUseCase,
   BoundedSessionStore,
   ContextBuilder,
   KnowledgeScopeRetriever,
@@ -114,40 +155,323 @@ const {
   RunCancelledError,
   RunController,
   ToolGateway,
+  buildExternalAiPrompt,
   buildResponsesRequestBody,
   buildQuestionRecords,
+  canonicalizePublicPageUrl,
   classifyKnowledgeIdentity,
   classifyModelTransportError,
   createAgentRunPlan,
+  dedupeQuestionContextItems,
   detectLearningPreferenceSignal,
+  determineQuestionToolNeeds,
+  extractModelUsage,
   extractResponsesAssistantMessage,
+  fetchWebPage,
   findKnowledgeScopeForFile,
   makeResponsesUrl,
+  normalizeQuestionConversation,
   pathIsWithinScope,
   parseComplexQuestionPlan,
   questionLooksComplex,
   searchHistoricalQuestions,
+  selectConversationBranch,
   shouldPlanComplexQuestion,
-} = compiledModule.exports;
+  ConversationGraph,
+  createStableConversationId,
+  migrateLegacyConversationSession,
+  validateConversationSession,
+} = sourceExports;
 assert.equal(typeof AgentRuntime, "function");
+assert.equal(typeof AskQuestionUseCase, "function");
+assert.equal(typeof normalizeQuestionConversation, "function");
 assert.equal(typeof ContextBuilder, "function");
 assert.equal(typeof ModelTransport, "function");
 assert.equal(typeof ModelTransportError, "function");
 assert.equal(typeof PluginDataStore, "function");
 assert.equal(typeof BoundedSessionStore, "function");
+assert.equal(typeof ConversationGraph, "function");
+assert.equal(typeof buildExternalAiPrompt, "function");
+assert.equal(typeof dedupeQuestionContextItems, "function");
 assert.equal(typeof LearningMemoryStore, "function");
 assert.equal(typeof RunMetricsStore, "function");
 assert.equal(typeof RunController, "function");
 assert.equal(typeof ToolGateway, "function");
 assert.equal(typeof KnowledgeScopeRetriever, "function");
+assert.equal(typeof selectConversationBranch, "function");
+assert.equal(typeof createStableConversationId, "function");
+assert.equal(typeof migrateLegacyConversationSession, "function");
+assert.equal(typeof validateConversationSession, "function");
+assert.equal(typeof canonicalizePublicPageUrl, "function");
+assert.equal(typeof fetchWebPage, "function");
+
+const injectedModelRequests = [];
+const injectedModelTransport = new ModelTransport({
+  httpClient: {
+    async request(request) {
+      injectedModelRequests.push(request);
+      return {
+        status: 200,
+        headers: { "content-type": "application/json" },
+        text: "",
+        json: {
+          choices: [{ message: { content: "Answer from a fake HTTP client" } }],
+          usage: { prompt_tokens: 12, completion_tokens: 4 },
+        },
+      };
+    },
+  },
+});
+const injectedModelResponse = await injectedModelTransport.send({
+  protocol: "chat_completions",
+  baseUrl: "https://model.example.com/v1",
+  model: "test-model",
+  headers: { Authorization: "Bearer fake" },
+  messages: [{ role: "user", content: "Test dependency injection" }],
+});
+assert.equal(injectedModelRequests.length, 1);
+assert.equal(
+  injectedModelRequests[0].url,
+  "https://model.example.com/v1/chat/completions",
+);
+assert.equal(
+  injectedModelResponse.assistantMessage.content,
+  "Answer from a fake HTTP client",
+);
+assert.equal(injectedModelResponse.usage.totalTokens, 16);
+
+assert.equal(
+  canonicalizePublicPageUrl("https://Example.COM:443/docs?q=1#section"),
+  "https://example.com/docs?q=1",
+);
+for (const blockedUrl of [
+  "file:///etc/passwd",
+  "http://example.com/insecure",
+  "https://user:password@example.com/private",
+  "https://example.com:8443/private",
+  "http://127.0.0.1/admin",
+  "http://2130706433/admin",
+  "http://169.254.169.254/latest/meta-data",
+  "http://100.100.100.200/latest/meta-data",
+  "http://192.168.1.10/",
+  "http://[::1]/",
+  "http://[::ffff:127.0.0.1]/",
+  "http://metadata.google.internal/",
+  "http://printer.local/",
+  "http://intranet/",
+]) {
+  assert.throws(
+    () => canonicalizePublicPageUrl(blockedUrl),
+    /Page fetch/,
+    `unsafe page URL must be rejected: ${blockedUrl}`,
+  );
+}
+
+const fetchConfig = {
+  httpClient: {
+    request: (request) => requestHandler(request),
+  },
+  provider: "kimi",
+  endpoint: "",
+  apiKey: "",
+  resultLimit: 5,
+  modelBaseUrl: "https://api.kimi.com/coding/v1",
+  allowedFetchUrls: new Set(["https://docs.example.com/guide?q=1#intro"]),
+};
+let secureFetchRequests = 0;
+requestHandler = async () => {
+  secureFetchRequests += 1;
+  return {
+    status: 200,
+    headers: { "content-type": "text/markdown", "content-length": "15" },
+    text: "# Trusted guide",
+  };
+};
+await assert.rejects(
+  fetchWebPage(fetchConfig, "https://docs.example.com/guide?q=2"),
+  /exact URL returned by web search/,
+);
+assert.equal(secureFetchRequests, 0, "provenance denial must happen before I/O");
+const secureFetchResult = await fetchWebPage(
+  fetchConfig,
+  "https://docs.example.com/guide?q=1",
+);
+assert.match(secureFetchResult.content, /Trusted guide/);
+assert.equal(secureFetchRequests, 1);
+
+requestHandler = async () => {
+  secureFetchRequests += 1;
+  return {
+    status: 200,
+    headers: { "content-length": String(1024 * 1024 + 1) },
+    text: "oversized",
+  };
+};
+await assert.rejects(
+  fetchWebPage(fetchConfig, "https://docs.example.com/guide?q=1"),
+  /1 MiB safety limit/,
+);
+
+const directFetchRequestsBefore = secureFetchRequests;
+await assert.rejects(
+  fetchWebPage(
+    {
+      ...fetchConfig,
+      provider: "tavily",
+    },
+    "https://docs.example.com/guide?q=1",
+  ),
+  /cannot validate every redirect hop and final URL/,
+);
+assert.equal(
+  secureFetchRequests,
+  directFetchRequestsBefore,
+  "direct requestUrl fetching must fail closed before network I/O",
+);
+
+const provenancePlugin = new AiReadingCompanionPlugin();
+provenancePlugin.getWebSearchProvider = () => "kimi";
+provenancePlugin.searchWebWithConfiguredProfiles = async () => ({
+  content: "Registered search result",
+  sources: [
+    {
+      title: "Registered",
+      url: "https://docs.example.com/registered",
+      snippet: "",
+      siteName: "docs.example.com",
+      date: "",
+    },
+  ],
+});
+provenancePlugin.makeWebSearchRuntimeConfig = () => ({
+  ...fetchConfig,
+  allowedFetchUrls: undefined,
+});
+const [provenanceSearchTool, provenanceFetchTool] =
+  provenancePlugin.createWebAgentTools(
+    "https://api.kimi.com/coding/v1",
+    {},
+    "",
+  );
+requestHandler = async () => ({
+  status: 200,
+  headers: { "content-type": "text/markdown" },
+  text: "# Registered page",
+});
+await assert.rejects(
+  provenanceFetchTool.execute(
+    { url: "https://docs.example.com/registered" },
+    { toolCallId: "fetch-before-search" },
+  ),
+  /returned by web search/,
+);
+await provenanceSearchTool.execute(
+  { query: "registered source" },
+  { toolCallId: "search-register" },
+);
+await assert.rejects(
+  provenanceFetchTool.execute(
+    { url: "https://docs.example.com/unregistered" },
+    { toolCallId: "fetch-unregistered" },
+  ),
+  /exact URL returned by web search/,
+);
+const registeredFetch = await provenanceFetchTool.execute(
+  { url: "https://docs.example.com/registered" },
+  { toolCallId: "fetch-registered" },
+);
+assert.match(registeredFetch.content, /Registered page/);
+
+const independentSearchPlugin = new AiReadingCompanionPlugin();
+independentSearchPlugin.getWebSearchProvider = () => "tavily";
+const independentTools = independentSearchPlugin.createWebAgentTools(
+  "https://model.example.com/v1",
+  {},
+  "",
+);
+assert.equal(independentTools.length, 1);
+assert.equal(independentTools[0].definition.function.name, "WebSearch");
+
+const externalPrompt = buildExternalAiPrompt({
+  provider: "chatgpt",
+  question: "How does a tool remain available after context compaction?",
+  questionPath: ["What is a tool?", "How is it loaded?"],
+  contextItems: [
+    {
+      id: "source-1",
+      kind: "source_excerpt",
+      relation: "support",
+      text: "A tool definition is supplied with the model request.",
+      sourceFile: "Agent/book.md",
+    },
+    {
+      id: "answer-1",
+      kind: "assistant_excerpt",
+      relation: "origin",
+      text: "The previous assistant claimed that the definition is always resident.",
+      messageId: 4,
+    },
+    {
+      id: "answer-duplicate",
+      kind: "assistant_excerpt",
+      relation: "support",
+      text: "The previous assistant claimed that the definition is always resident.",
+      messageId: 4,
+    },
+  ],
+  learningPreferences: "Use concrete examples.",
+  requestWebSearch: true,
+});
+assert.match(externalPrompt, /# Current question/);
+assert.match(externalPrompt, /## S1/);
+assert.match(externalPrompt, /## A1/);
+assert.doesNotMatch(externalPrompt, /## A2/);
+assert.match(externalPrompt, /unverified previous AI explanations/);
+assert.match(externalPrompt, /Use web search/);
 assert.equal(typeof buildResponsesRequestBody, "function");
 assert.equal(typeof extractResponsesAssistantMessage, "function");
+assert.equal(typeof determineQuestionToolNeeds, "function");
+assert.equal(typeof extractModelUsage, "function");
 assert.equal(makeResponsesUrl("https://example.com/v1/chat/completions"), "https://example.com/v1/responses");
 assert.equal(
   questionLooksComplex(
-    "先解释不同类型的工具在整个 Agent 中的调用位置和使用流程是什么？另外，Codex 和 Claude Code 的 ask user questions 是普通工具吗？最后，plan 工具又是怎么运行和参与控制的？",
+    "请分别处理三个可以独立研究的问题，并在最后合并结论。第一，解释不同类型的工具在整个 Agent 中的调用位置、权限边界和完整使用流程是什么？第二，说明 Codex 和 Claude Code 的 ask user questions 是普通工具、控制工具还是交互协议，它们分别如何暂停并恢复执行？第三，解释 plan 工具怎样更新任务状态、怎样影响后续决策，以及它与模型推理和运行时控制之间是什么关系？",
   ),
   true,
+);
+assert.deepEqual(determineQuestionToolNeeds("请在当前文件夹的笔记里检索相关讨论"), {
+  localKnowledge: true,
+  webSearch: false,
+});
+assert.deepEqual(determineQuestionToolNeeds("这个和我之前讨论的 Memory 生成有什么关系？"), {
+  localKnowledge: true,
+  webSearch: false,
+});
+assert.deepEqual(determineQuestionToolNeeds("请查找最新的官方文档和来源链接"), {
+  localKnowledge: false,
+  webSearch: true,
+});
+assert.deepEqual(determineQuestionToolNeeds("请解释所选原文中的这个概念"), {
+  localKnowledge: false,
+  webSearch: false,
+});
+assert.deepEqual(
+  extractModelUsage({
+    usage: {
+      input_tokens: 1200,
+      output_tokens: 300,
+      total_tokens: 1500,
+      input_tokens_details: { cached_tokens: 800 },
+      output_tokens_details: { reasoning_tokens: 120 },
+    },
+  }),
+  {
+    inputTokens: 1200,
+    cachedInputTokens: 800,
+    outputTokens: 300,
+    reasoningTokens: 120,
+    totalTokens: 1500,
+  },
 );
 assert.equal(shouldPlanComplexQuestion("A short question?", "auto"), false);
 assert.deepEqual(
@@ -168,6 +492,182 @@ assert.equal(mobileRunPlan.device, "mobile");
 assert.equal(mobileRunPlan.images.maxCount, 4);
 assert.equal(Object.isFrozen(mobileRunPlan), true);
 assert.equal(Object.isFrozen(mobileRunPlan.context), true);
+
+const branchedConversation = [
+  { id: 1, role: "user", content: "Root question", parentAssistantMessageId: null },
+  { id: 2, role: "assistant", content: "Root answer", parentQuestionMessageId: 1 },
+  { id: 3, role: "user", content: "Branch A question", parentAssistantMessageId: 2 },
+  { id: 4, role: "assistant", content: "Branch A answer", parentQuestionMessageId: 3 },
+  { id: 5, role: "user", content: "Branch B question", parentAssistantMessageId: 2 },
+  { id: 6, role: "assistant", content: "Branch B answer", parentQuestionMessageId: 5 },
+  { id: 7, role: "user", content: "Branch A follow-up", parentAssistantMessageId: 4 },
+];
+assert.deepEqual(
+  selectConversationBranch(branchedConversation, 7).map((message) => message.id),
+  [1, 2, 3, 4, 7],
+  "only ancestors of the selected branch endpoint should enter model context",
+);
+assert.deepEqual(
+  selectConversationBranch(branchedConversation, 6).map((message) => message.id),
+  [1, 2, 5, 6],
+  "an assistant endpoint should retain its own question and ancestors",
+);
+assert.deepEqual(selectConversationBranch(branchedConversation, 999), []);
+assert.deepEqual(
+  selectConversationBranch(
+    [
+      { id: 1, role: "user", content: "cycle", parentAssistantMessageId: 2 },
+      { id: 2, role: "assistant", content: "cycle", parentQuestionMessageId: 1 },
+    ],
+    2,
+  ).map((message) => message.id),
+  [1, 2],
+  "malformed relationship cycles must terminate deterministically",
+);
+
+const conversationGraph = new ConversationGraph(branchedConversation, 7);
+assert.deepEqual(
+  conversationGraph.childrenOf(2).map((message) => message.id),
+  [3, 5],
+  "the graph should expose sibling questions without flattening their branches",
+);
+assert.deepEqual(
+  conversationGraph.questionPath().map((message) => message.id),
+  [1, 3, 7],
+  "the active endpoint should resolve to a stable ancestor question path",
+);
+assert.equal(conversationGraph.parentOf(7).id, 4);
+const fallbackGraph = new ConversationGraph(branchedConversation, "missing");
+assert.equal(fallbackGraph.activeEndpointMessageId, 7);
+assert.ok(
+  fallbackGraph.issues.some((issue) => issue.code === "invalid_active_endpoint"),
+);
+
+const stableQuestionId = createStableConversationId(
+  "question",
+  "session A",
+  "local/1",
+);
+assert.equal(
+  stableQuestionId,
+  createStableConversationId("question", "session A", "local/1"),
+);
+assert.notEqual(
+  stableQuestionId,
+  createStableConversationId("question", "session B", "local/1"),
+);
+
+const legacyConversationInput = {
+  context: {
+    sourceFile: "Reading/legacy.md",
+    heading: "Legacy heading",
+    excerpt: "Legacy source",
+  },
+  createdAt: 100,
+  messages: [
+    { role: "user", content: "Legacy question" },
+    { role: "assistant", content: "Legacy answer" },
+  ],
+  pendingQuestions: [
+    {
+      id: "pending-legacy",
+      text: "Follow-up",
+      status: "asked",
+      sourceExcerpt: "Legacy answer",
+      sourceMessageId: "legacy-answer",
+      questionMessageId: "legacy-question",
+      answerMessageId: "legacy-answer",
+      sourceStart: 3,
+      sourceEnd: 9,
+      contextItems: [
+        {
+          id: "context-legacy",
+          kind: "assistant_excerpt",
+          relation: "origin",
+          text: "Legacy answer",
+        },
+      ],
+    },
+  ],
+  excerptRecords: [
+    {
+      id: "excerpt-legacy",
+      text: "Keep this",
+      sourceMessageId: "legacy-answer",
+      sourceQuestionMessageId: "legacy-question",
+      linkedQuestionKey: "pending:pending-legacy",
+    },
+  ],
+  excerptDraft: "Editable legacy draft",
+};
+const legacyConversationSnapshot = JSON.stringify(legacyConversationInput);
+const migratedConversation = migrateLegacyConversationSession(
+  legacyConversationInput,
+  "import-1",
+);
+assert.equal(JSON.stringify(legacyConversationInput), legacyConversationSnapshot);
+assert.match(String(migratedConversation.session.id), /^arc:session:/);
+assert.match(String(migratedConversation.session.messages[0].id), /^arc:message:/);
+assert.equal(
+  migratedConversation.session.messages[1].parentQuestionMessageId,
+  migratedConversation.session.messages[0].id,
+);
+assert.equal(migratedConversation.session.context.sourceHeading, "Legacy heading");
+assert.equal(
+  migratedConversation.session.pendingQuestions[0].questionMessageId,
+  "legacy-question",
+);
+assert.equal(
+  migratedConversation.session.pendingQuestions[0].contextItems[0].kind,
+  "assistant_excerpt",
+);
+assert.equal(
+  migratedConversation.session.excerptRecords[0].linkedQuestionKey,
+  "pending:pending-legacy",
+);
+assert.equal(migratedConversation.session.excerptDraft, "Editable legacy draft");
+assert.ok(migratedConversation.migrated);
+assert.equal(migratedConversation.valid, true);
+assert.ok(
+  migratedConversation.issues.some(
+    (issue) => issue.code === "inferred_parent_relationship",
+  ),
+);
+const canonicalConversation = migrateLegacyConversationSession(
+  migratedConversation.session,
+);
+assert.equal(canonicalConversation.migrated, false);
+assert.equal(canonicalConversation.valid, true);
+
+const invalidConversationIssues = validateConversationSession({
+  id: "invalid-session",
+  context: { sourceFile: "Reading/invalid.md", excerpt: "" },
+  createdAt: 1,
+  updatedAt: 1,
+  messages: [
+    { id: "duplicate", role: "user", content: "Q" },
+    { id: "duplicate", role: "assistant", content: "A" },
+    {
+      id: "dangling",
+      role: "user",
+      content: "Q2",
+      parentAssistantMessageId: "missing-answer",
+    },
+  ],
+  pendingQuestions: [],
+  excerptRecords: [],
+  excerptDraft: "",
+  activePathMessageId: "missing-endpoint",
+});
+assert.ok(
+  invalidConversationIssues.some((issue) => issue.code === "duplicate_message_id"),
+);
+assert.ok(
+  invalidConversationIssues.some((issue) => issue.code === "dangling_parent"),
+);
+assert.ok(
+  invalidConversationIssues.some((issue) => issue.code === "invalid_active_endpoint"),
+);
 
 const builtContext = new ContextBuilder().build({
   runId: "context-test",
@@ -241,6 +741,65 @@ assert.ok(
   ).includedCharacters < 500,
   "historical questions should yield first when the global context budget is exhausted",
 );
+
+const useCaseModelRequests = [];
+const askQuestionUseCase = new AskQuestionUseCase({
+  modelTransport: {
+    send: async (options) => {
+      useCaseModelRequests.push(options);
+      return {
+        assistantMessage: {
+          role: "assistant",
+          content: "A platform-independent answer.",
+        },
+        sources: [{ title: "Source", url: "https://example.com/source" }],
+        usage: {
+          inputTokens: 120,
+          cachedInputTokens: 40,
+          outputTokens: 30,
+          reasoningTokens: 0,
+          totalTokens: 150,
+        },
+        hostedToolCalls: [],
+        status: 200,
+      };
+    },
+  },
+});
+const useCaseAnswer = await askQuestionUseCase.execute({
+  mobile: false,
+  apiProtocol: "chat_completions",
+  webSearchRoute: "disabled",
+  maxAgentToolRounds: 3,
+  toolGrants: [],
+  runtimeTools: [],
+  model: {
+    baseUrl: "https://example.com/v1",
+    model: "test-model",
+    headers: { Authorization: "Bearer test" },
+    maxOutputTokens: 1024,
+  },
+  context: {
+    systemPrompt: "Explain clearly.",
+    selectedPassage: "Selected source passage.",
+    conversationOrQuestion: "What does this mean?",
+    confirmedMemory: "Prefer examples.",
+  },
+  complexQuestionMode: "off",
+  dedupeSources: (sources) => sources.slice(0, 1),
+});
+assert.equal(useCaseAnswer.content, "A platform-independent answer.");
+assert.equal(useCaseAnswer.runPlan.maxToolRounds, 0);
+assert.equal(useCaseAnswer.contextReceipt.imageCount, 0);
+assert.equal(useCaseAnswer.runtimeMetrics.providerUsage.totalTokens, 150);
+assert.equal(useCaseModelRequests.length, 1);
+assert.ok(
+  useCaseModelRequests[0].messages.some(
+    (message) =>
+      message.role === "system" &&
+      String(message.content).includes("Selected source passage"),
+  ),
+);
 assert.equal(classifyModelTransportError(401, "bad key").kind, "authentication");
 assert.equal(classifyModelTransportError(429, "rate limit").retryable, true);
 assert.equal(classifyModelTransportError(400, "bad request").retryable, false);
@@ -279,7 +838,7 @@ const boundedStore = new BoundedSessionStore({
   maxAgeMs: 60_000,
 });
 const now = Date.now();
-const keptSessions = await boundedStore.save([
+const boundedSaveResult = await boundedStore.save([
   {
     id: 1,
     createdAt: now - 3,
@@ -287,20 +846,275 @@ const keptSessions = await boundedStore.save([
     pendingQuestions: [{ id: 1, text: "First?", status: "pending", createdAt: now }],
   },
   { id: 2, createdAt: now - 2, updatedAt: now - 2 },
-  { id: 3, createdAt: now - 1, updatedAt: now - 1 },
+  {
+    id: 3,
+    createdAt: now - 1,
+    updatedAt: now - 1,
+    excerptDraft: "Unsaved excerpt draft restored after reload",
+    excerptCount: 1,
+    excerptRecords: [
+      {
+        id: "excerpt-1",
+        text: "A retained answer fragment",
+        sourceMessageId: 5,
+        sourceQuestionMessageId: 4,
+        linkedQuestionKey: "message:4",
+      },
+    ],
+    pendingQuestions: [
+      {
+        id: "draft-1",
+        text: "",
+        status: "pending",
+        isDraft: true,
+        sourceExcerpt: "A retained answer fragment",
+        sourceMessageId: 5,
+      },
+    ],
+  },
 ]);
+const keptSessions = boundedSaveResult.sessions;
 assert.deepEqual(keptSessions.map((session) => session.id), [3, 2]);
+assert.equal(boundedSaveResult.report.status, "ok");
 assert.deepEqual((await boundedStore.load()).map((session) => session.id), [3, 2]);
 assert.equal(
-  buildQuestionRecords({
-    id: "session-a",
-    createdAt: now,
-    pendingQuestions: [
-      { id: "q1", text: "How?", status: "resolved", sourceExcerpt: "A quote" },
-    ],
-  })[0].sourceExcerpt,
-  "A quote",
+  (await boundedStore.load())[0].excerptDraft,
+  "Unsaved excerpt draft restored after reload",
 );
+assert.equal((await boundedStore.load())[0].excerptRecords[0].linkedQuestionKey, "message:4");
+assert.equal((await boundedStore.load())[0].pendingQuestions[0].isDraft, true);
+
+const compactedFiles = new Map();
+const compactedStore = new BoundedSessionStore({
+  adapter: {
+    exists: async (path) => compactedFiles.has(path),
+    read: async (path) => compactedFiles.get(path),
+    write: async (path, value) => compactedFiles.set(path, value),
+  },
+  path: "plugin/compacted-sessions.json",
+  maxSessions: 3,
+  maxBytes: 16_384,
+  maxAgeMs: 60_000,
+});
+const retainedDraft = "User-reviewed excerpt draft ".repeat(80);
+const retainedPendingQuestion = "How does the retained branch continue?";
+const compactedSaveResult = await compactedStore.save(
+  [
+    {
+      id: "older-session",
+      createdAt: now - 2,
+      updatedAt: now - 2,
+      messages: [
+        {
+          id: "old-answer",
+          role: "assistant",
+          content: "Disposable older history ".repeat(1_200),
+          createdAt: now - 2,
+        },
+      ],
+    },
+    {
+      id: "active-session",
+      createdAt: now - 1,
+      updatedAt: now - 10,
+      context: {
+        sourceFile: "Learning/active.md",
+        heading: "Active source",
+        startLine: 8,
+        endLine: 12,
+        excerpt: "Large selected source passage ".repeat(900),
+      },
+      activePathMessageId: "answer-2",
+      excerptDraft: retainedDraft,
+      pendingQuestions: [
+        {
+          id: "pending-1",
+          text: retainedPendingQuestion,
+          status: "pending",
+          sourceMessageId: "answer-2",
+          createdAt: now,
+        },
+      ],
+      messages: [
+        {
+          id: "question-1",
+          role: "user",
+          content: "Root question ".repeat(600),
+          createdAt: now - 5,
+          parentAssistantMessageId: null,
+        },
+        {
+          id: "answer-1",
+          role: "assistant",
+          content: "Root answer ".repeat(1_000),
+          createdAt: now - 4,
+          parentQuestionMessageId: "question-1",
+          reasoning_content: "Rebuildable reasoning ".repeat(800),
+          runtimeMetrics: { rounds: 4, diagnostic: "x".repeat(8_000) },
+        },
+        {
+          id: "question-2",
+          role: "user",
+          content: "Child question ".repeat(600),
+          createdAt: now - 3,
+          parentAssistantMessageId: "answer-1",
+        },
+        {
+          id: "answer-2",
+          role: "assistant",
+          content: "Current answer ".repeat(1_000),
+          createdAt: now - 2,
+          parentQuestionMessageId: "question-2",
+          contextReceipt: { sections: [{ content: "x".repeat(9_000) }] },
+        },
+      ],
+    },
+  ],
+  { activeSessionId: "active-session" },
+);
+assert.equal(compactedSaveResult.sessions[0].id, "active-session");
+assert.equal(compactedSaveResult.report.status, "degraded");
+assert.equal(compactedSaveResult.report.protectedSessionId, "active-session");
+assert.ok(compactedSaveResult.report.shortenedMessages > 0);
+assert.ok(compactedSaveResult.report.reasons.includes("messages_shortened"));
+assert.equal(
+  JSON.parse(compactedFiles.get("plugin/compacted-sessions.json")).degradation.status,
+  "degraded",
+);
+const restoredCompactedSession = (await compactedStore.load())[0];
+assert.equal(restoredCompactedSession.id, "active-session");
+assert.equal(restoredCompactedSession.excerptDraft, retainedDraft);
+assert.equal(
+  restoredCompactedSession.pendingQuestions[0].text,
+  retainedPendingQuestion,
+);
+assert.equal(restoredCompactedSession.activePathMessageId, "answer-2");
+assert.equal(
+  restoredCompactedSession.messages.find((message) => message.id === "answer-2")
+    .parentQuestionMessageId,
+  "question-2",
+);
+assert.ok(
+  restoredCompactedSession.messages.some((message) =>
+    String(message.content).includes("Older message shortened"),
+  ),
+);
+
+const essentialFiles = new Map();
+const essentialStore = new BoundedSessionStore({
+  adapter: {
+    exists: async (path) => essentialFiles.has(path),
+    read: async (path) => essentialFiles.get(path),
+    write: async (path, value) => essentialFiles.set(path, value),
+  },
+  path: "plugin/essential-overflow.json",
+  maxBytes: 16_384,
+});
+const essentialDraft = "Confirmed user draft ".repeat(1_200);
+const essentialSaveResult = await essentialStore.save(
+  [
+    {
+      id: "only-active-session",
+      createdAt: now,
+      updatedAt: now,
+      excerptDraft: essentialDraft,
+      pendingQuestions: [
+        { id: "q", text: "Keep this question", status: "pending", createdAt: now },
+      ],
+      messages: [],
+    },
+  ],
+  { activeSessionId: "only-active-session" },
+);
+assert.equal(essentialSaveResult.sessions.length, 1);
+assert.equal(essentialSaveResult.report.exceedsLimit, true);
+assert.ok(
+  essentialSaveResult.report.reasons.includes("essential_data_exceeds_limit"),
+);
+assert.equal(
+  JSON.parse(essentialFiles.get("plugin/essential-overflow.json")).sessions.length,
+  1,
+);
+assert.equal((await essentialStore.load())[0].excerptDraft, essentialDraft);
+
+const legacyFiles = new Map([
+  [
+    "plugin/legacy-sessions.json",
+    JSON.stringify({
+      version: 1,
+      updatedAt: now,
+      sessions: [
+        {
+          id: "legacy-session",
+          createdAt: now,
+          updatedAt: now,
+          excerptDraft: "Legacy draft",
+          pendingQuestionsExpanded: true,
+          currentPathExpanded: false,
+          futureUiExtension: { retained: true },
+          pendingQuestions: [
+            { id: "legacy-q", text: "Legacy question", status: "pending" },
+          ],
+        },
+      ],
+    }),
+  ],
+]);
+const legacyStore = new BoundedSessionStore({
+  adapter: {
+    exists: async (path) => legacyFiles.has(path),
+    read: async (path) => legacyFiles.get(path),
+    write: async (path, value) => legacyFiles.set(path, value),
+  },
+  path: "plugin/legacy-sessions.json",
+});
+const restoredLegacySessions = await legacyStore.load();
+assert.equal(restoredLegacySessions[0].excerptDraft, "Legacy draft");
+assert.equal(restoredLegacySessions[0].pendingQuestions[0].text, "Legacy question");
+assert.equal(restoredLegacySessions[0].pendingQuestionsExpanded, true);
+assert.equal(restoredLegacySessions[0].currentPathExpanded, false);
+assert.deepEqual(restoredLegacySessions[0].futureUiExtension, { retained: true });
+await legacyStore.save(restoredLegacySessions, { activeSessionId: "legacy-session" });
+const resavedLegacySession = (await legacyStore.load())[0];
+assert.equal(resavedLegacySession.pendingQuestionsExpanded, true);
+assert.equal(resavedLegacySession.currentPathExpanded, false);
+assert.deepEqual(resavedLegacySession.futureUiExtension, { retained: true });
+const linkedQuestionRecord = buildQuestionRecords({
+  id: "session-a",
+  createdAt: now,
+  pendingQuestions: [
+    {
+      id: "q1",
+      text: "How?",
+      status: "resolved",
+      sourceExcerpt: "A quote",
+      sourceMessageId: 3,
+      parentQuestionMessageId: 2,
+      sourceStart: 12,
+      sourceEnd: 20,
+      isDraft: false,
+      contextItems: [
+        {
+          id: "answer-context",
+          kind: "assistant_excerpt",
+          relation: "origin",
+          text: "A quote",
+        },
+      ],
+      questionMessageId: 4,
+      answerMessageId: 5,
+    },
+  ],
+})[0];
+assert.equal(linkedQuestionRecord.sourceExcerpt, "A quote");
+assert.equal(linkedQuestionRecord.sourceMessageId, 3);
+assert.equal(linkedQuestionRecord.parentQuestionMessageId, 2);
+assert.equal(linkedQuestionRecord.sourceStart, 12);
+assert.equal(linkedQuestionRecord.sourceEnd, 20);
+assert.notEqual(linkedQuestionRecord.isDraft, true);
+assert.equal(linkedQuestionRecord.contextItems[0].kind, "assistant_excerpt");
+assert.equal(linkedQuestionRecord.questionMessageId, 4);
+assert.equal(linkedQuestionRecord.answerMessageId, 5);
 assert.equal(
   classifyKnowledgeIdentity(
     { path: "Clips/article.md" },
@@ -402,6 +1216,12 @@ await metricsStore.append({
   localSourceCount: 2,
   webSourceCount: 1,
   modelRounds: 1,
+  providerInputTokens: 1000,
+  providerCachedInputTokens: 600,
+  providerOutputTokens: 200,
+  providerReasoningTokens: 80,
+  providerTotalTokens: 1200,
+  hostedToolCalls: 1,
   toolCalls: 0,
   toolAttempts: 3,
   toolSuccesses: 2,
@@ -423,6 +1243,9 @@ assert.equal(metricSummary.completed, 1);
 assert.equal(metricSummary.trimmingRate, 1);
 assert.equal(metricSummary.toolAttempts, 3);
 assert.equal(metricSummary.toolBudgetDenials, 1);
+assert.equal(metricSummary.providerUsageRuns, 1);
+assert.equal(metricSummary.providerTotalTokens, 1200);
+assert.equal(metricSummary.providerCachedInputTokens, 600);
 
 const runEvents = [];
 const runController = new RunController();
@@ -509,6 +1332,10 @@ assert.deepEqual(cacheGateway.getDiagnostics(), {
   successes: 1,
   budgetDenials: 0,
   cacheHits: 1,
+  resultCharacters: 15,
+  resultBudgetCharacters: 0,
+  resultBudgetDenials: 0,
+  resultTruncations: 0,
   tools: [
     {
       toolName: "Cached",
@@ -516,6 +1343,8 @@ assert.deepEqual(cacheGateway.getDiagnostics(), {
       successes: 1,
       budgetDenials: 0,
       cacheHits: 1,
+      resultCharacters: 15,
+      resultTruncations: 0,
     },
   ],
 });
@@ -559,6 +1388,55 @@ const truncatedToolResult = await truncatingGateway
   .execute({}, { toolCallId: "b1", round: 0 });
 assert.match(truncatedToolResult.content, /Tool result truncated/);
 assert.ok(truncatedToolResult.content.length < 200);
+
+const sharedBudgetGateway = new ToolGateway({
+  tools: [
+    {
+      definition: {
+        type: "function",
+        function: { name: "SharedBudget", parameters: { type: "object" } },
+      },
+      execute: async (arguments_) => ({ content: String(arguments_.value || "") }),
+    },
+  ],
+  grants: [
+    {
+      id: "shared-budget-grant",
+      toolName: "SharedBudget",
+      maxCalls: 3,
+      maxResultCharacters: 100,
+    },
+  ],
+  maxTotalResultCharacters: 12,
+});
+const sharedBudgetTool = sharedBudgetGateway.asRuntimeTools()[0];
+assert.equal(
+  (await sharedBudgetTool.execute(
+    { value: "abcdef" },
+    { toolCallId: "shared-1", round: 0 },
+  )).content,
+  "abcdef",
+);
+const sharedBudgetSecondResult = await sharedBudgetTool.execute(
+  { value: "ghijklmnop" },
+  { toolCallId: "shared-2", round: 1 },
+);
+assert.equal(sharedBudgetSecondResult.content.length, 6);
+assert.equal(
+  sharedBudgetSecondResult.artifacts.sharedEvidenceBudgetTruncated,
+  true,
+);
+assert.equal(sharedBudgetGateway.getDiagnostics().resultCharacters, 12);
+assert.equal(sharedBudgetGateway.getDiagnostics().resultTruncations, 1);
+assert.equal(sharedBudgetTool.isAvailable?.(), false);
+await assert.rejects(
+  sharedBudgetTool.execute(
+    { value: "new evidence" },
+    { toolCallId: "shared-3", round: 2 },
+  ),
+  /shared tool evidence budget/i,
+);
+assert.equal(sharedBudgetGateway.getDiagnostics().resultBudgetDenials, 1);
 
 assert.equal(pathIsWithinScope("Knowledge/AI/memory.md", "Knowledge/AI"), true);
 assert.equal(pathIsWithinScope("Knowledge/Other.md", "Knowledge/AI"), false);
@@ -808,7 +1686,11 @@ assert.equal(
   degradedRuntimeResult.assistantMessage.content,
   "Completed with existing evidence.",
 );
-assert.equal(degradedGateway.getDiagnostics().budgetDenials, 1);
+assert.equal(
+  degradedGateway.getDiagnostics().budgetDenials,
+  0,
+  "an exhausted tool should be withdrawn before another budget-denied execution",
+);
 
 const plugin = new AiReadingCompanionPlugin();
 
@@ -1038,6 +1920,12 @@ plugin.app.workspace = {
 
 const view = registeredViewFactory({ app: plugin.app });
 view.renderActiveSession = () => {};
+view.contentEl = {
+  win: {
+    requestAnimationFrame: (callback) => callback(),
+    setTimeout,
+  },
+};
 const imageInfo = { file: { path: "Reading/image-note.md" } };
 const imageOnlyEditor = {
   somethingSelected: () => false,
@@ -1052,6 +1940,47 @@ assert.equal(imageOnlyContext.excerpt, "![[assets/chart.png]]");
 assert.equal(imageOnlyContext.images.length, 1);
 assert.equal(imageOnlyContext.images[0].explicitlySelected, true);
 assert.equal(view.createSession(imageOnlyContext).imageSelections[0].selected, true);
+
+const pathMessages = [
+  { id: 101, role: "user", content: "Q1", parentAssistantMessageId: null },
+  { id: 102, role: "assistant", content: "A1", parentQuestionMessageId: 101 },
+  { id: 103, role: "user", content: "Q2", parentAssistantMessageId: 102 },
+  { id: 104, role: "assistant", content: "A2", parentQuestionMessageId: 103 },
+  { id: 105, role: "user", content: "Q3", parentAssistantMessageId: 104 },
+  { id: 106, role: "assistant", content: "A3", parentQuestionMessageId: 105 },
+];
+const originalPathTestState = {
+  messages: view.messages,
+  activePathMessageId: view.activePathMessageId,
+  viewedMessageId: view.viewedMessageId,
+  updateCurrentPathWorkspace: view.updateCurrentPathWorkspace,
+  syncActiveSession: view.syncActiveSession,
+  setCompactViewTab: view.setCompactViewTab,
+};
+view.messages = pathMessages;
+view.activePathMessageId = 106;
+view.viewedMessageId = 106;
+view.updateCurrentPathWorkspace = () => {};
+view.syncActiveSession = () => {};
+view.setCompactViewTab = () => {};
+view.jumpToConversationMessage(101, { preservePath: true });
+assert.equal(view.activePathMessageId, 106);
+assert.deepEqual(
+  view.getCurrentQuestionPath().map((message) => message.content),
+  ["Q1", "Q2", "Q3"],
+);
+view.jumpToConversationMessage(101);
+assert.equal(view.activePathMessageId, 106);
+assert.equal(view.viewedMessageId, 101);
+view.continueFromConversationMessage(101);
+assert.equal(view.activePathMessageId, 102);
+assert.equal(view.viewedMessageId, 102);
+view.messages = originalPathTestState.messages;
+view.activePathMessageId = originalPathTestState.activePathMessageId;
+view.viewedMessageId = originalPathTestState.viewedMessageId;
+view.updateCurrentPathWorkspace = originalPathTestState.updateCurrentPathWorkspace;
+view.syncActiveSession = originalPathTestState.syncActiveSession;
+view.setCompactViewTab = originalPathTestState.setCompactViewTab;
 
 const imageEmbed = {
   getAttribute: (name) => (name === "src" ? "images/fig1-3.svg" : null),
@@ -1106,6 +2035,8 @@ assert.equal(mixedContext.images[0].explicitlySelected, true);
 const selectedAnswerClasses = new Set();
 const selectedQuestionClasses = new Set();
 const selectedAnswerMessage = {
+  id: 9,
+  parentQuestionMessageId: 8,
   bodyEl: {},
   selectedText: "",
   selectionAddButton: {
@@ -1151,13 +2082,37 @@ view.pendingQuestionInputEl = {
   value: "How does the Harness stop a running tool?",
   focus: () => {},
 };
-view.pendingQuestionSource = "Harness controls tool calls and stop boundaries.";
-view.addPendingQuestion();
+  view.pendingQuestionSource = "Harness controls tool calls and stop boundaries.";
+  view.pendingQuestionSourceMessageId = 9;
+  view.addPendingQuestion();
 assert.equal(view.pendingQuestions.length, 1);
 assert.equal(view.pendingQuestions[0].status, "pending");
+  assert.equal(
+    view.pendingQuestions[0].sourceExcerpt,
+    "Harness controls tool calls and stop boundaries.",
+  );
+  assert.equal(view.pendingQuestions[0].sourceMessageId, 9);
 assert.equal(
-  view.pendingQuestions[0].sourceExcerpt,
-  "Harness controls tool calls and stop boundaries.",
+  view.pendingQuestions[0].contextItems.some(
+    (item) => item.kind === "source_excerpt",
+  ),
+  true,
+);
+assert.equal(
+  view.pendingQuestions[0].contextItems.some(
+    (item) => item.kind === "assistant_excerpt",
+  ),
+  true,
+);
+view.attachSelectionToPendingQuestion(
+  "A second answer fragment linked to the same question.",
+  selectedAnswerMessage,
+);
+assert.equal(
+  view.pendingQuestions[0].contextItems.filter(
+    (item) => item.kind === "assistant_excerpt",
+  ).length,
+  2,
 );
 const pendingQuestionId = view.pendingQuestions[0].id;
 view.setPendingQuestionStatus(pendingQuestionId, "parked");
@@ -1167,6 +2122,7 @@ assert.equal(view.pendingQuestions[0].status, "pending");
 view.hideSelectionToolbar = () => {
   view.selectedMessage = null;
 };
+selectedAnswerMessage.selectedText = "A focused answer excerpt";
 view.addTextToExcerptDraft(
   selectedAnswerMessage.selectedText,
   selectedAnswerMessage,
@@ -1198,6 +2154,17 @@ assert.equal(
   view.pendingQuestions[0].text,
   "How does the Harness stop a running tool?",
 );
+view.appendMessage = () => {};
+view.updateCurrentPathWorkspace = () => {};
+view.importExternalAnswer(
+  pendingQuestionId,
+  "claude",
+  "Claude's imported answer stays in the local conversation.",
+);
+assert.equal(view.pendingQuestions[0].status, "asked");
+assert.equal(view.pendingQuestions[0].externalProvider, "claude");
+assert.equal(view.messages.at(-1).externalResponse, true);
+assert.equal(view.messages.at(-1).externalProvider, "claude");
 view.deleteSession(firstSessionId);
 assert.equal(view.sessions.length, 1);
 
@@ -1231,6 +2198,31 @@ assert.equal(genericAnswer, "Grounded answer");
 assert.equal(genericRequests[0].url, "https://example.com/v1/chat/completions");
 assert.equal(genericRequests[0].headers.Authorization, "Bearer test-only-key");
 assert.equal("tools" in JSON.parse(genericRequests[0].body), false);
+
+await plugin.askAi(
+  { excerpt: "Selected passage" },
+  branchedConversation,
+  [],
+  false,
+  false,
+  { branchEndpointMessageId: 7 },
+);
+const branchRequestMessages = JSON.parse(genericRequests.at(-1).body).messages;
+const branchRequestText = branchRequestMessages
+  .filter((message) => message.role === "user" || message.role === "assistant")
+  .map((message) => message.content);
+assert.deepEqual(branchRequestText, [
+  "Root question",
+  "Root answer",
+  "Branch A question",
+  "Branch A answer",
+  "Branch A follow-up",
+]);
+assert.equal(
+  branchRequestText.some((content) => String(content).includes("Branch B")),
+  false,
+  "the main AI request must not leak a sibling branch into context",
+);
 
 const complexRequests = [];
 requestHandler = async (options) => {
@@ -1376,12 +2368,13 @@ requestHandler = async (options) => {
       status: 200,
       json: {
         id: "resp-local-tool-1",
+        usage: { input_tokens: 100, output_tokens: 10, total_tokens: 110 },
         output: [
           {
             type: "function_call",
             call_id: "knowledge-call-1",
-            name: "SearchKnowledgeScope",
-            arguments: JSON.stringify({ query: "memory update", limit: 3 }),
+            name: "RetrieveKnowledgeEvidence",
+            arguments: JSON.stringify({ query: "memory update" }),
           },
         ],
       },
@@ -1391,6 +2384,12 @@ requestHandler = async (options) => {
     status: 200,
     json: {
       id: "resp-local-tool-2",
+      usage: {
+        input_tokens: 120,
+        output_tokens: 20,
+        total_tokens: 140,
+        input_tokens_details: { cached_tokens: 50 },
+      },
       output: [
         {
           type: "message",
@@ -1437,7 +2436,7 @@ const mixedResponsesAnswer = await plugin.askAi(
     sourceFile: "Knowledge/AI/current.md",
     sourceHeading: "Memory update",
   },
-  "When should memory update?",
+  "Search my Obsidian notes about memory update and find the latest official source.",
   [],
   true,
   true,
@@ -1448,6 +2447,9 @@ assert.equal(
   "Responses and local tools can share one runtime.",
 );
 assert.equal(mixedResponsesRequests.length, 2);
+assert.equal(mixedResponsesAnswer.runtimeMetrics.providerUsage.totalTokens, 250);
+assert.equal(mixedResponsesAnswer.runtimeMetrics.providerUsage.cachedInputTokens, 50);
+assert.equal(mixedResponsesAnswer.runtimeMetrics.modelCallDiagnostics.length, 2);
 const firstMixedResponsesBody = JSON.parse(mixedResponsesRequests[0].body);
 assert.equal(
   firstMixedResponsesBody.tools.some((tool) => tool.type === "web_search"),
@@ -1455,7 +2457,7 @@ assert.equal(
 );
 assert.equal(
   firstMixedResponsesBody.tools.some(
-    (tool) => tool.type === "function" && tool.name === "SearchKnowledgeScope",
+    (tool) => tool.type === "function" && tool.name === "RetrieveKnowledgeEvidence",
   ),
   true,
 );
@@ -1522,10 +2524,8 @@ assert.equal(
 );
 const localKnowledgeBody = JSON.parse(localKnowledgeRequests[0].body);
 assert.equal(
-  localKnowledgeBody.tools.some(
-    (tool) => tool.function.name === "SearchKnowledgeScope",
-  ),
-  true,
+  Array.isArray(localKnowledgeBody.tools),
+  false,
 );
 assert.equal(
   localKnowledgeBody.messages.some((message) =>
@@ -1533,7 +2533,7 @@ assert.equal(
       "Only a confirmed learning event should update durable memory.",
     ),
   ),
-  true,
+  false,
 );
 
 let chatRound = 0;
@@ -1710,6 +2710,16 @@ const tavilyChatRequest = tavilyRequests.find((request) =>
   request.url.endsWith("/chat/completions"),
 );
 assert.equal(tavilyChatRequest.headers.Authorization, "Bearer model-key");
+const tavilyChatPayload = JSON.parse(tavilyChatRequest.body);
+assert.deepEqual(
+  tavilyChatPayload.tools.map((tool) => tool.function.name),
+  ["WebSearch"],
+  "independent providers without a hosted fetch adapter must not register FetchURL",
+);
+assert.match(
+  tavilyChatPayload.messages.map((message) => message.content || "").join("\n"),
+  /No page-fetch tool is available/,
+);
 
 const preSearchRequests = [];
 requestHandler = async (options) => {

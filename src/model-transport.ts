@@ -1,5 +1,5 @@
-import { requestUrl } from "obsidian";
 import { raceWithAbort, throwIfAborted } from "./abort";
+import type { HttpClient } from "./platform-http";
 import {
   buildResponsesRequestBody,
   extractResponsesAssistantMessage,
@@ -54,17 +54,28 @@ export interface ModelTransportRequest {
   messages: any[];
   toolDefinitions?: Record<string, any>[];
   hostedWebSearchType?: HostedWebSearchType;
+  maxOutputTokens?: number;
   signal?: AbortSignal;
+}
+
+export interface ModelUsage {
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  totalTokens: number;
 }
 
 export interface ModelTransportResponse {
   assistantMessage: any;
   sources: ResponsesApiSource[];
+  usage: ModelUsage;
+  hostedToolCalls: string[];
   status: number;
 }
 
 export interface ModelTransportOptions {
-  request?: typeof requestUrl;
+  httpClient: HttpClient;
 }
 
 function chatCompletionsUrl(baseUrl: string) {
@@ -122,6 +133,44 @@ function apiErrorMessage(responseBody: any) {
   return String(error?.message || error?.code || "").trim();
 }
 
+function tokenCount(value: unknown) {
+  const parsed = Number(value || 0);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0;
+}
+
+export function extractModelUsage(responseBody: any): ModelUsage {
+  const usage = responseBody?.usage || {};
+  const inputTokens = tokenCount(usage.input_tokens ?? usage.prompt_tokens);
+  const outputTokens = tokenCount(usage.output_tokens ?? usage.completion_tokens);
+  const cachedInputTokens = tokenCount(
+    usage.input_tokens_details?.cached_tokens ??
+      usage.prompt_tokens_details?.cached_tokens,
+  );
+  const reasoningTokens = tokenCount(
+    usage.output_tokens_details?.reasoning_tokens ??
+      usage.completion_tokens_details?.reasoning_tokens,
+  );
+  return {
+    inputTokens,
+    cachedInputTokens,
+    outputTokens,
+    reasoningTokens,
+    totalTokens: tokenCount(usage.total_tokens) || inputTokens + outputTokens,
+  };
+}
+
+function collectHostedToolCalls(responseBody: any) {
+  return (Array.isArray(responseBody?.output) ? responseBody.output : [])
+    .map((item: any) => String(item?.type || "").trim())
+    .filter(
+      (type: string) =>
+        type &&
+        type !== "message" &&
+        type !== "function_call" &&
+        type !== "reasoning",
+    );
+}
+
 export function classifyModelTransportError(
   status: number | null,
   message: string,
@@ -158,10 +207,10 @@ export function classifyModelTransportError(
 }
 
 export class ModelTransport {
-  private request: typeof requestUrl;
+  private httpClient: HttpClient;
 
-  constructor(options: ModelTransportOptions = {}) {
-    this.request = options.request || requestUrl;
+  constructor(options: ModelTransportOptions) {
+    this.httpClient = options.httpClient;
   }
 
   async send(options: ModelTransportRequest): Promise<ModelTransportResponse> {
@@ -174,23 +223,31 @@ export class ModelTransport {
             messages: options.messages,
             toolDefinitions,
             hostedWebSearchType: options.hostedWebSearchType || "",
+            maxOutputTokens: options.maxOutputTokens,
           })
         : { model: options.model, messages: options.messages };
+    if (
+      options.protocol === "chat_completions" &&
+      Number.isFinite(options.maxOutputTokens) &&
+      Number(options.maxOutputTokens) > 0
+    ) {
+      body.max_tokens = Math.floor(Number(options.maxOutputTokens));
+    }
     if (options.protocol === "chat_completions" && toolDefinitions.length) {
       body.tools = toolDefinitions;
       body.tool_choice = "auto";
     }
     try {
       const response = await raceWithAbort(
-        this.request({
+        this.httpClient.request({
           url:
             options.protocol === "responses"
               ? makeResponsesUrl(options.baseUrl)
               : chatCompletionsUrl(options.baseUrl),
           method: "POST",
           headers: options.headers,
-          throw: false,
           body: JSON.stringify(body),
+          signal: options.signal,
         }),
         options.signal,
         "The model request was cancelled.",
@@ -215,6 +272,11 @@ export class ModelTransport {
         sources: Array.isArray(assistantMessage.sources)
           ? assistantMessage.sources
           : [],
+        usage: extractModelUsage(responseBody),
+        hostedToolCalls:
+          options.protocol === "responses"
+            ? collectHostedToolCalls(responseBody)
+            : [],
         status: response.status,
       };
     } catch (error) {

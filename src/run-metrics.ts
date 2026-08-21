@@ -19,11 +19,31 @@ export interface AgentRunMetric {
   localSourceCount: number;
   webSourceCount: number;
   modelRounds: number;
+  providerInputTokens?: number;
+  providerCachedInputTokens?: number;
+  providerOutputTokens?: number;
+  providerReasoningTokens?: number;
+  providerTotalTokens?: number;
+  hostedToolCalls?: number;
+  modelCallDiagnostics?: Array<{
+    sequence: number;
+    purpose: string;
+    inputTokens: number;
+    cachedInputTokens: number;
+    outputTokens: number;
+    reasoningTokens: number;
+    totalTokens: number;
+    hostedToolCalls: number;
+  }>;
   toolCalls: number;
   toolAttempts?: number;
   toolSuccesses?: number;
   toolBudgetDenials?: number;
   toolCacheHits?: number;
+  toolResultCharacters?: number;
+  toolResultBudgetCharacters?: number;
+  toolResultBudgetDenials?: number;
+  toolResultTruncations?: number;
   decomposedSubquestions?: number;
   toolDiagnostics?: Array<{
     toolName: string;
@@ -31,6 +51,8 @@ export interface AgentRunMetric {
     successes: number;
     budgetDenials: number;
     cacheHits: number;
+    resultCharacters?: number;
+    resultTruncations?: number;
   }>;
 }
 
@@ -138,6 +160,29 @@ export class RunMetricsStore {
               metrics.length,
           )
         : 0,
+      providerUsageRuns: metrics.filter(
+        (metric) => Number(metric.providerTotalTokens || 0) > 0,
+      ).length,
+      providerInputTokens: metrics.reduce(
+        (total, metric) => total + Number(metric.providerInputTokens || 0),
+        0,
+      ),
+      providerCachedInputTokens: metrics.reduce(
+        (total, metric) => total + Number(metric.providerCachedInputTokens || 0),
+        0,
+      ),
+      providerOutputTokens: metrics.reduce(
+        (total, metric) => total + Number(metric.providerOutputTokens || 0),
+        0,
+      ),
+      providerTotalTokens: metrics.reduce(
+        (total, metric) => total + Number(metric.providerTotalTokens || 0),
+        0,
+      ),
+      hostedToolCalls: metrics.reduce(
+        (total, metric) => total + Number(metric.hostedToolCalls || 0),
+        0,
+      ),
       toolAttempts: metrics.reduce(
         (total, metric) => total + Number(metric.toolAttempts || 0),
         0,
@@ -152,6 +197,18 @@ export class RunMetricsStore {
       ),
       toolCacheHits: metrics.reduce(
         (total, metric) => total + Number(metric.toolCacheHits || 0),
+        0,
+      ),
+      toolResultCharacters: metrics.reduce(
+        (total, metric) => total + Number(metric.toolResultCharacters || 0),
+        0,
+      ),
+      toolResultBudgetDenials: metrics.reduce(
+        (total, metric) => total + Number(metric.toolResultBudgetDenials || 0),
+        0,
+      ),
+      toolResultTruncations: metrics.reduce(
+        (total, metric) => total + Number(metric.toolResultTruncations || 0),
         0,
       ),
       decomposedSubquestions: metrics.reduce(

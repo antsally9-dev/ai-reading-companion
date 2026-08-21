@@ -30,6 +30,7 @@ export interface AgentRunPlan {
   knowledgeScopePath: string;
   timeoutMs: number;
   maxToolRounds: number;
+  maxToolEvidenceCharacters: number;
   context: Readonly<ContextBudgets>;
   images: Readonly<ImageBudgets>;
   toolGrants: readonly Readonly<ToolGrant>[];
@@ -42,6 +43,7 @@ export interface CreateAgentRunPlanOptions {
   knowledgeScopePath?: string;
   timeoutMs?: number;
   maxToolRounds?: number;
+  maxToolEvidenceCharacters?: number;
   toolGrants?: ToolGrant[];
 }
 
@@ -57,26 +59,26 @@ export function createAgentRunPlan(
 ): Readonly<AgentRunPlan> {
   const context: ContextBudgets = options.mobile
     ? {
-        totalCharacters: 42_000,
-        systemCharacters: 6_000,
-        passageCharacters: 12_000,
-        conversationCharacters: 18_000,
-        questionHistoryCharacters: 3_000,
-        confirmedMemoryCharacters: 2_000,
-        localEvidenceCharacters: 8_000,
-        webEvidenceCharacters: 8_000,
-        compactionCharacters: 4_000,
+        totalCharacters: 28_000,
+        systemCharacters: 5_000,
+        passageCharacters: 8_000,
+        conversationCharacters: 9_000,
+        questionHistoryCharacters: 1_500,
+        confirmedMemoryCharacters: 1_000,
+        localEvidenceCharacters: 4_000,
+        webEvidenceCharacters: 5_000,
+        compactionCharacters: 2_000,
       }
     : {
-        totalCharacters: 70_000,
-        systemCharacters: 8_000,
-        passageCharacters: 18_000,
-        conversationCharacters: 32_000,
-        questionHistoryCharacters: 4_000,
-        confirmedMemoryCharacters: 2_500,
-        localEvidenceCharacters: 12_000,
-        webEvidenceCharacters: 14_000,
-        compactionCharacters: 6_000,
+        totalCharacters: 36_000,
+        systemCharacters: 6_000,
+        passageCharacters: 10_000,
+        conversationCharacters: 12_000,
+        questionHistoryCharacters: 2_000,
+        confirmedMemoryCharacters: 1_500,
+        localEvidenceCharacters: 6_000,
+        webEvidenceCharacters: 8_000,
+        compactionCharacters: 2_500,
       };
   const images: ImageBudgets = options.mobile
     ? {
@@ -105,6 +107,10 @@ export function createAgentRunPlan(
     knowledgeScopePath: String(options.knowledgeScopePath || ""),
     timeoutMs: Math.max(1_000, options.timeoutMs || 120_000),
     maxToolRounds: Math.max(0, options.maxToolRounds ?? 6),
+    maxToolEvidenceCharacters: Math.max(
+      1_000,
+      options.maxToolEvidenceCharacters || (options.mobile ? 16_000 : 28_000),
+    ),
     context: Object.freeze(context),
     images: Object.freeze(images),
     toolGrants: Object.freeze(grants),

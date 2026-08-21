@@ -275,6 +275,127 @@ try {
         } catch (error) {
           cancellationReason = error?.reason || error?.name || "unknown";
         }
+        const leaf = await plugin.getAiConversationLeaf();
+        const view = leaf.view;
+        await view.startSession({
+          excerpt: "A root answer may lead to sibling follow-up questions.",
+          sourceFile,
+          sourceHeading: "UI branch semantics acceptance",
+          sourceLineStart: 1,
+          sourceLineEnd: 1,
+          lineRange: "1-1",
+          images: [],
+        });
+        const uiSessionId = view.activeSession.id;
+        let uiStructure;
+        try {
+          const rootQuestion = {
+            id: view.nextMessageId++,
+            role: "user",
+            content: "What is the root idea?",
+            parentAssistantMessageId: null,
+          };
+          const rootAnswer = {
+            id: view.nextMessageId++,
+            role: "assistant",
+            content: "The root answer has two aspects.",
+            parentQuestionMessageId: rootQuestion.id,
+            sources: [],
+          };
+          const firstChildQuestion = {
+            id: view.nextMessageId++,
+            role: "user",
+            content: "How does the first aspect work?",
+            parentAssistantMessageId: rootAnswer.id,
+          };
+          const firstChildAnswer = {
+            id: view.nextMessageId++,
+            role: "assistant",
+            content: "The first aspect answer.",
+            parentQuestionMessageId: firstChildQuestion.id,
+            sources: [],
+          };
+          const secondChildQuestion = {
+            id: view.nextMessageId++,
+            role: "user",
+            content: "How does the second aspect work?",
+            parentAssistantMessageId: rootAnswer.id,
+          };
+          const secondChildAnswer = {
+            id: view.nextMessageId++,
+            role: "assistant",
+            content: "The second aspect answer.",
+            parentQuestionMessageId: secondChildQuestion.id,
+            sources: [],
+          };
+          view.messages.push(
+            rootQuestion,
+            rootAnswer,
+            firstChildQuestion,
+            firstChildAnswer,
+            secondChildQuestion,
+            secondChildAnswer,
+          );
+          view.activePathMessageId = secondChildAnswer.id;
+          view.viewedMessageId = secondChildAnswer.id;
+          view.renderActiveSession();
+
+          const initialTreeNodes = view.contentEl.querySelectorAll(
+            ".ai-agent-question-tree-node",
+          );
+          const firstChildNode = view.contentEl.querySelector(
+            '[data-question-message-id="' + firstChildQuestion.id + '"]',
+          );
+          firstChildNode.querySelector(".ai-agent-question-tree-select").click();
+          const endpointAfterNavigation = view.activePathMessageId;
+          const viewedAfterNavigation = view.viewedMessageId;
+          const refreshedFirstChildNode = view.contentEl.querySelector(
+            '[data-question-message-id="' + firstChildQuestion.id + '"]',
+          );
+          refreshedFirstChildNode
+            .querySelector(".ai-agent-question-tree-continue")
+            .click();
+          const endpointAfterContinue = view.activePathMessageId;
+
+          const drawerTrigger = view.contentEl.querySelector(
+            ".ai-agent-session-drawer-trigger",
+          );
+          drawerTrigger.click();
+          const drawer = view.contentEl.querySelector(
+            ".ai-agent-session-drawer",
+          );
+          const drawerOpened = drawerTrigger.getAttribute("aria-expanded") === "true"
+            && drawer.hidden === false;
+          view.contentEl.dispatchEvent(new KeyboardEvent("keydown", {
+            key: "Escape",
+            bubbles: true,
+          }));
+          const drawerClosedWithEscape =
+            drawerTrigger.getAttribute("aria-expanded") === "false"
+            && drawer.hidden === true;
+
+          uiStructure = {
+            treeNodeCount: initialTreeNodes.length,
+            siblingDepths: Array.from(initialTreeNodes).map(
+              (node) => node.getAttribute("data-depth"),
+            ),
+            endpointBeforeNavigation: secondChildAnswer.id,
+            endpointAfterNavigation,
+            viewedAfterNavigation,
+            firstChildQuestionId: firstChildQuestion.id,
+            endpointAfterContinue,
+            firstChildAnswerId: firstChildAnswer.id,
+            drawerOpened,
+            drawerClosedWithEscape,
+            hasSingleContextScroll: Boolean(
+              view.contentEl.querySelector(
+                ".ai-agent-context-panel > .ai-agent-context-scroll",
+              ),
+            ),
+          };
+        } finally {
+          view.deleteSession(uiSessionId);
+        }
         const sourceAfter = {
           mtime: sourceNote.stat?.mtime || 0,
           size: sourceNote.stat?.size || 0,
@@ -296,6 +417,7 @@ try {
             reason: cancellationReason,
             events: cancellationEvents,
           },
+          uiStructure,
           sourceUnchanged:
             sourceBefore.mtime === sourceAfter.mtime
             && sourceBefore.size === sourceAfter.size,
@@ -364,6 +486,26 @@ assert.deepEqual(result.cancellation.events, [
   "cancel_requested",
   "cancelled",
 ]);
+assert.equal(result.uiStructure.treeNodeCount, 3);
+assert.deepEqual(result.uiStructure.siblingDepths, ["1", "2", "2"]);
+assert.equal(
+  result.uiStructure.endpointAfterNavigation,
+  result.uiStructure.endpointBeforeNavigation,
+  "viewing a question-tree node must not change the branch endpoint",
+);
+assert.equal(
+  result.uiStructure.viewedAfterNavigation,
+  result.uiStructure.firstChildQuestionId,
+  "viewing a question-tree node must update only the viewed message",
+);
+assert.equal(
+  result.uiStructure.endpointAfterContinue,
+  result.uiStructure.firstChildAnswerId,
+  "only the explicit continue action may change the branch endpoint",
+);
+assert.equal(result.uiStructure.drawerOpened, true);
+assert.equal(result.uiStructure.drawerClosedWithEscape, true);
+assert.equal(result.uiStructure.hasSingleContextScroll, true);
 assert.equal(
   result.sourceUnchanged,
   true,
@@ -410,6 +552,7 @@ process.stdout.write(`${JSON.stringify({
   localSourceCount: result.sourceCount,
   responses: result.responses,
   cancellation: result.cancellation,
+  uiStructure: result.uiStructure,
   sourceUnchanged: result.sourceUnchanged,
   lifecycle: result.events,
 }, null, 2)}\n`);

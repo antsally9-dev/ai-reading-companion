@@ -34,6 +34,9 @@ const context = await esbuild.context({
 	],
 	format: 'cjs',
 	target: 'es2021',
+	// Keep localized UI strings as UTF-8 instead of expanding every CJK
+	// character to a six-byte JavaScript escape in the release bundle.
+	charset: 'utf8',
 	logLevel: 'info',
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,

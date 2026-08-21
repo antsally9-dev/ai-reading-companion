@@ -10,6 +10,7 @@ import {
 
 export const MAX_KNOWLEDGE_SEARCH_CALLS = 2;
 export const MAX_KNOWLEDGE_READ_CALLS = 2;
+export const MAX_KNOWLEDGE_RETRIEVAL_CALLS = 1;
 const MAX_READ_REFS = 3;
 const MAX_SCOPE_RESULTS = MAX_KNOWLEDGE_READ_CALLS * MAX_READ_REFS;
 const MAX_PASSAGE_CHARACTERS = 6000;
@@ -569,9 +570,9 @@ export class KnowledgeScopeRetriever {
         definition: {
           type: "function",
           function: {
-            name: "SearchKnowledgeScope",
+            name: "RetrieveKnowledgeEvidence",
             description:
-              "Search note titles, headings, aliases, tags, and links inside the already-authorized Obsidian knowledge scope. Use only when the supplied passages are insufficient.",
+              "Retrieve a few directly relevant passages from the already-authorized Obsidian folder. Use at most once, only when the user explicitly asks to connect, find, or compare existing notes. Search and passage reading are completed together.",
             parameters: {
               type: "object",
               properties: {
@@ -585,65 +586,20 @@ export class KnowledgeScopeRetriever {
         execute: async (arguments_) => {
           const query = String(arguments_.query || "").trim();
           if (!query) {
-            throw new Error("Local knowledge search requires a query.");
+            throw new Error("Local knowledge retrieval requires a query.");
           }
-          const results = await this.search(query);
+          const results = await this.search(query, MAX_READ_REFS);
+          const evidence = results.length
+            ? await this.read(results.map((result) => result.sourceRef))
+            : "";
           return {
-            content: results.length
-              ? results
-                  .map((result, index) =>
-                    [
-                      `${index + 1}. ${result.title}`,
-                      `Source ref: ${result.sourceRef}`,
-                      `Path: ${result.path}`,
-                      result.headings.length
-                        ? `Headings: ${result.headings.join("; ")}`
-                        : "",
-                      result.tags.length ? `Tags: ${result.tags.join("; ")}` : "",
-                      `Identity: ${result.identity}`,
-                      `Epistemic status: ${result.epistemicStatus}`,
-                      `Matched by: ${result.reasons.join(", ")}`,
-                    ]
-                      .filter(Boolean)
-                      .join("\n"),
-                  )
-                  .join("\n\n")
-              : "No matching notes were found in the authorized knowledge scope.",
-            artifacts: { localSources: results },
-          };
-        },
-      },
-      {
-        definition: {
-          type: "function",
-          function: {
-            name: "ReadKnowledgePassages",
-            description:
-              "Read a few exact passages using source refs returned by SearchKnowledgeScope. Arbitrary paths are not accepted.",
-            parameters: {
-              type: "object",
-              properties: {
-                source_refs: {
-                  type: "array",
-                  items: { type: "string" },
-                  maxItems: MAX_READ_REFS,
-                },
-              },
-              required: ["source_refs"],
-              additionalProperties: false,
+            content:
+              evidence ||
+              "No directly relevant passages were found in the authorized knowledge scope. Continue from the selected source and clearly disclose this gap.",
+            artifacts: {
+              localSources: this.getUsedSources(),
+              candidateCount: results.length,
             },
-          },
-        },
-        execute: async (arguments_) => {
-          const refs = Array.isArray(arguments_.source_refs)
-            ? arguments_.source_refs.map((ref) => String(ref))
-            : [];
-          if (!refs.length || refs.length > MAX_READ_REFS) {
-            throw new Error(`ReadKnowledgePassages accepts 1-${MAX_READ_REFS} source refs.`);
-          }
-          const content = await this.read(refs);
-          return {
-            content: content || "No matching passages were found in those notes.",
           };
         },
       },

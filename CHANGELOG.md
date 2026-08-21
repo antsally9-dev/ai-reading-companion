@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+- Hardened page fetching so only exact HTTPS URLs returned by the current trusted search run can be fetched; direct client fetching now fails closed when the host cannot validate DNS and every redirect hop.
+- Isolated model context to the active conversation branch, preventing sibling questions and answers from leaking into one another.
+- Added bounded session degradation that preserves the active conversation, pending questions, editable excerpt draft, and relationship graph instead of silently saving an empty session set.
+- Added one aggregate tool-evidence budget shared by every tool round and complex-question subtask, with graceful tool withdrawal when the budget is exhausted.
+- Extracted a platform-neutral conversation domain, `AskQuestionUseCase`, HTTP interface, and Obsidian HTTP adapter from the plugin host.
+- Reworked the desktop workspace around a conversation drawer, a complete relationship-based question tree, one scrolling knowledge rail, and a narrower continuous answer column.
+- Separated the question being viewed from the branch endpoint used by the next question; browsing no longer rewrites the active path, while **Continue from here** does so explicitly.
+- Fixed current-path navigation so clicking an earlier question scrolls to that turn without collapsing the complete active question path.
+- Added an external web-AI workflow: build and edit a standalone prompt, copy it for ChatGPT or Claude, open the selected service, and import the returned answer into the existing question path.
+- Questions now persist multiple typed context items, including original-source excerpts and selected excerpts from previous AI answers, with editable origin/support/contrast relationships.
+- Added actions for attaching further source or answer selections to an existing pending question; previous AI excerpts are explicitly marked as unverified when exported.
+- Reworked the conversation workspace into a compact session navigator and a resizable reading-context/chat split.
+- Moved the question queue into the reading sidebar and made the excerpt draft collapsible.
+- Added a persisted current-question path in the reading sidebar, so each answer can be traced back through its parent questions and source passage.
+- Turning a selected answer fragment into a question now creates an editable, source-bound draft in the question queue instead of sending it immediately.
+- Kept the excerpt draft fully editable while recording lightweight source and question relationships for each collected fragment.
+- Let every desktop reading-sidebar module expand to its full content height, with auto-growing editable question and excerpt fields and one shared sidebar scrollbar; long modules remain independently collapsible.
+- Linked queued questions to their source answer, asked turn, and answer turn with in-conversation jump actions.
+- Added the minimal persisted relationship fields needed for a future user-authored conversation-branch view.
+
+- Added deterministic per-question tool routing: ordinary passage explanations stay tool-free, while explicit local-continuity and fresh-web requests receive only the relevant capability.
+- Replaced the two-step local search/read model workflow and eager prefetch with one bounded `RetrieveKnowledgeEvidence` call that returns ready-to-use passages.
+- Withdrew exhausted tools before the next model round, capped ordinary Agent tool rounds dynamically, and tightened complex-question planning to reduce false-positive planner calls.
+- Reduced desktop and mobile context budgets, retained at most three recent conversation turns, and added a configurable per-call answer-token cap.
+- Added per-model-call provider usage diagnostics for input, cached input, output, reasoning, total tokens, and hosted tool calls without storing request text.
+- Clarified that unsaved excerpt drafts are automatically cached in bounded plugin-local session storage and restored after reload without being written to the Vault.
 - Aligned folder-search candidates with the local passage read budget (`6 = 3 × 2`).
 - Added run-scoped tool-result deduplication, shared local passage caching, and a shared local evidence character budget.
 - Changed tool call-budget exhaustion from a fatal request error into a recoverable tool-unavailable result; the exhausted tool is withdrawn and the model must finish from existing evidence.
