@@ -49,7 +49,8 @@ if (existsSync("data.json")) {
   fail("data.json must not be committed or included in a release.");
 }
 
+const refType = process.env.GITHUB_REF_TYPE;
 const tag = process.env.GITHUB_REF_NAME;
-if (tag && tag !== manifest.version) {
+if (refType === "tag" && tag && tag !== manifest.version) {
   fail(`Git tag ${tag} must exactly match manifest version ${manifest.version}.`);
 }
