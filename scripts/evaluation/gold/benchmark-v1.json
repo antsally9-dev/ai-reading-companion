@@ -1,0 +1,1549 @@
+{
+  "version": "v1",
+  "benchmark_note": "Reading notes/Agent Context Engineering 基准.md",
+  "note": "chunk id = 基准文章 ## 标题的 Axx 前缀；utility 分级 3=必须 2=强支持 1=主题相关低效用 0=无关；expected_action 取值 RETRIEVAL(任意检索即可)/NO_RETRIEVAL/REUSE_PREVIOUS/INCREMENTAL_RETRIEVAL/null(不计分)",
+  "suites": {
+    "core": {
+      "phrasing": "imperative",
+      "cases": [
+        {
+          "case_id": "S01",
+          "question": "帮我查找笔记：模型决定要不要调用工具的时候，已经能看到工具执行结果了吗？",
+          "snippet": "执行结果了吗",
+          "required": {
+            "A06": 3
+          },
+          "hard_negative": {},
+          "expected_action": "RETRIEVAL",
+          "expected_answer_points": [
+            "决策前只能看到工具定义",
+            "结果在执行后才产生并进入后续轮"
+          ],
+          "tags": [
+            "quote-trap",
+            "direct-retrieval",
+            "core"
+          ]
+        },
+        {
+          "case_id": "S02",
+          "question": "帮我查找笔记：聊得越来越久以后，是不是之前每句话都会原封不动塞进下一次调用？",
+          "snippet": "原封不动塞进",
+          "required": {
+            "A04": 3,
+            "A07": 2
+          },
+          "hard_negative": {
+            "A07": 1,
+            "A15": 1
+          },
+          "expected_action": "RETRIEVAL",
+          "expected_answer_points": [
+            "长历史可被压缩或摘要",
+            "只保留当前任务所需信息",
+            "压缩可能损失细节"
+          ],
+          "tags": [
+            "semantic-paraphrase",
+            "quote-trap",
+            "core"
+          ]
+        },
+        {
+          "case_id": "S03",
+          "question": "帮我查找笔记：和问题主题相关的内容，是不是都应该给模型？",
+          "snippet": "都应该给模型",
+          "required": {
+            "A08": 3,
+            "A09": 3
+          },
+          "hard_negative": {
+            "A07": 1
+          },
+          "expected_action": "RETRIEVAL",
+          "expected_answer_points": [
+            "相关性不等于回答效用",
+            "应寻找最小充分证据集合"
+          ],
+          "tags": [
+            "core",
+            "hard-negative"
+          ]
+        },
+        {
+          "case_id": "S04",
+          "question": "帮我查找笔记：为什么 Memory 里明明保存了信息，模型这一轮却不一定知道？",
+          "snippet": "却不一定知道",
+          "required": {
+            "A05": 3,
+            "A10": 3
+          },
+          "hard_negative": {},
+          "expected_action": "RETRIEVAL",
+          "expected_answer_points": [
+            "memory 不等于每轮 context",
+            "信息需重新注入才能被使用",
+            "存在 memory 不代表当前可见"
+          ],
+          "tags": [
+            "core",
+            "multi-hop"
+          ]
+        },
+        {
+          "case_id": "S05",
+          "question": "帮我查找笔记：Developer instruction 在 context compaction 时是不是一定不会被压缩？",
+          "snippet": "一定不会被压缩",
+          "required": {},
+          "hard_negative": {
+            "A02": 1,
+            "A04": 1
+          },
+          "expected_action": "RETRIEVAL",
+          "abstention": true,
+          "expected_answer_points": [
+            "文章没有明确说明 developer instruction 是否参与 compaction",
+            "不能据此推出一定不会被压缩"
+          ],
+          "tags": [
+            "core",
+            "insufficient-evidence"
+          ]
+        },
+        {
+          "case_id": "S06",
+          "question": "帮我查找笔记：我已经选中了一个段落，回答时是不是就没有必要再搜全文了？",
+          "snippet": "没有必要再搜全文",
+          "required": {
+            "A03": 3
+          },
+          "hard_negative": {},
+          "expected_action": "RETRIEVAL",
+          "expected_answer_points": [
+            "选区是 anchor 不是唯一事实来源",
+            "其他位置可能有定义或限定，仍应检索全文"
+          ],
+          "tags": [
+            "core",
+            "selected-vs-fulltext"
+          ]
+        },
+        {
+          "case_id": "S07",
+          "question": "帮我查找笔记：如果最相关的片段只能回答问题的一半，还应该坚持只用它吗？",
+          "snippet": "只能回答问题的一半",
+          "required": {
+            "A09": 3,
+            "A10": 3
+          },
+          "hard_negative": {},
+          "expected_action": "RETRIEVAL",
+          "expected_answer_points": [
+            "应补全证据链而不是坚持 Top1",
+            "目标是最小充分证据集合"
+          ],
+          "tags": [
+            "core",
+            "sufficiency"
+          ]
+        },
+        {
+          "case_id": "S08",
+          "question": "帮我查找笔记：和问题语义最相似的 chunk，是不是一定应该排第一？",
+          "snippet": "一定应该排第一",
+          "required": {
+            "A08": 3,
+            "A09": 3
+          },
+          "hard_negative": {
+            "A07": 1
+          },
+          "expected_action": "RETRIEVAL",
+          "expected_answer_points": [
+            "语义相似不等于回答效用",
+            "可能只是 hard negative",
+            "排序应按效用而非相似度"
+          ],
+          "tags": [
+            "hard-negative",
+            "quote-trap",
+            "core"
+          ]
+        },
+        {
+          "case_id": "QT1",
+          "question": "帮我查找笔记：选中的内容太少，会不会影响回答质量？",
+          "snippet": "会不会影响回答质量",
+          "required": {
+            "A03": 3,
+            "A09": 2
+          },
+          "hard_negative": {
+            "A15": 1
+          },
+          "expected_action": "RETRIEVAL",
+          "expected_answer_points": [
+            "选区是 anchor 不是唯一来源",
+            "不足时应补全最小充分证据"
+          ],
+          "tags": [
+            "core",
+            "quote-trap"
+          ]
+        },
+        {
+          "case_id": "QT2",
+          "question": "帮我查找笔记：笔记里有没有讲 caching 对上下文的影响？",
+          "snippet": "caching",
+          "required": {},
+          "hard_negative": {},
+          "expected_action": "RETRIEVAL",
+          "abstention": true,
+          "expected_answer_points": [
+            "文章未覆盖 caching，不能强行作答",
+            "A15 本身声明了未覆盖（合法引用正例）"
+          ],
+          "tags": [
+            "core",
+            "quote-trap",
+            "quote-legit",
+            "insufficient-evidence"
+          ]
+        }
+      ]
+    },
+    "routing": {
+      "phrasing": "natural",
+      "note": "测路由闸门。expected_action_current = 现工具描述下的预期；expected_action_ideal = 产品理想预期。分差 = 放宽闸门的量化依据。",
+      "cases": [
+        {
+          "case_id": "R01",
+          "question": "笔记里说的 context window 是什么？为什么会有这个上限？",
+          "snippet": "context window 是什么",
+          "expected_action_current": "NO_RETRIEVAL",
+          "expected_action_ideal": "RETRIEVAL"
+        },
+        {
+          "case_id": "R02",
+          "question": "如果对话聊得太长快装不下了，一般会怎么处理？",
+          "snippet": "快装不下",
+          "expected_action_current": "NO_RETRIEVAL",
+          "expected_action_ideal": "RETRIEVAL"
+        },
+        {
+          "case_id": "R03",
+          "question": "agent 的 context 都是由哪几部分组成的？",
+          "snippet": "哪几部分组成",
+          "expected_action_current": "NO_RETRIEVAL",
+          "expected_action_ideal": "RETRIEVAL"
+        },
+        {
+          "case_id": "R04",
+          "question": "康奈尔笔记法具体怎么用？",
+          "snippet": "康奈尔笔记法具体",
+          "expected_action_current": "NO_RETRIEVAL",
+          "expected_action_ideal": "RETRIEVAL"
+        },
+        {
+          "case_id": "R05",
+          "question": "memory 和对话历史是一回事吗？",
+          "snippet": "是一回事吗",
+          "expected_action_current": "NO_RETRIEVAL",
+          "expected_action_ideal": "RETRIEVAL"
+        },
+        {
+          "case_id": "R06",
+          "question": "工具的定义和工具的结果，分别是什么时候给模型看的？",
+          "snippet": "什么时候给模型看",
+          "expected_action_current": "NO_RETRIEVAL",
+          "expected_action_ideal": "RETRIEVAL"
+        },
+        {
+          "case_id": "R07",
+          "question": "我选中的这段话说检索质量比数量重要，为什么？",
+          "snippet": "比数量重要",
+          "expected_action_current": "NO_RETRIEVAL",
+          "expected_action_ideal": "NO_RETRIEVAL"
+        },
+        {
+          "case_id": "R08",
+          "question": "那上下文无关文法对理解 agent 的 context 有帮助吗？",
+          "snippet": "上下文无关文法",
+          "expected_action_current": "NO_RETRIEVAL",
+          "expected_action_ideal": "RETRIEVAL"
+        }
+      ]
+    },
+    "multi": {
+      "phrasing": "T1 imperative, follow-ups natural",
+      "scenarios": [
+        {
+          "scenario_id": "M01",
+          "topic": "递进 + 误区",
+          "turns": [
+            {
+              "turn": 1,
+              "question": "帮我查找笔记：Agent 每次调用模型的时候，context 都是重新构建的吗？",
+              "snippet": "重新构建的吗",
+              "required": {
+                "A01": 3,
+                "A02": 2
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL",
+              "resolved_question": "Agent 每次模型调用的 context 是否重新构造"
+            },
+            {
+              "turn": 2,
+              "question": "那聊久了以后呢？",
+              "snippet": "聊久了以后呢",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "resolved_question": "conversation 很长以后 context construction 如何处理历史消息"
+            },
+            {
+              "turn": 3,
+              "question": "那这个和 memory 有什么区别？",
+              "snippet": "和 memory 有什么区别",
+              "required": {
+                "A05": 3,
+                "A04": 2,
+                "A11": 2
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "resolved_question": "compaction 和 memory 的区别（这个 = compaction）",
+              "judge": [
+                "coreference",
+                "conceptual_positioning"
+              ]
+            },
+            {
+              "turn": 4,
+              "question": "所以本质上不都是为了记得更久吗？",
+              "snippet": "记得更久吗",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": "REUSE_PREVIOUS",
+              "resolved_question": "compaction 与 memory 是否等同（用户把'信息被保存'和'本轮可见'混在一起）",
+              "judge": [
+                "misconception_detection"
+              ]
+            }
+          ]
+        },
+        {
+          "scenario_id": "M03",
+          "topic": "强指代链",
+          "turns": [
+            {
+              "turn": 1,
+              "question": "帮我查找笔记：Tool definition 和 tool result 分别是什么时候给模型的？",
+              "snippet": "分别是什么时候",
+              "required": {
+                "A06": 3
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL"
+            },
+            {
+              "turn": 2,
+              "question": "那它是在什么时候产生的？",
+              "snippet": "什么时候产生的",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "resolved_question": "tool result 何时产生（它 = tool result）",
+              "judge": [
+                "coreference"
+              ]
+            },
+            {
+              "turn": 3,
+              "question": "如果模型还没执行就已经看到它，会发生什么？",
+              "snippet": "还没执行就已经看到",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "resolved_question": "假设执行前看到 tool result 会怎样（它 = tool result，指代保持）",
+              "judge": [
+                "coreference"
+              ]
+            }
+          ]
+        },
+        {
+          "scenario_id": "M04",
+          "topic": "分支后返回",
+          "turns": [
+            {
+              "turn": 1,
+              "question": "帮我查找笔记：Context 和 Memory 最大的区别是什么？",
+              "snippet": "最大的区别",
+              "required": {
+                "A05": 3,
+                "A01": 2
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL"
+            },
+            {
+              "turn": 2,
+              "question": "那 Memory 是不是一定跨 session？",
+              "snippet": "一定跨 session",
+              "required": {
+                "A05": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL"
+            },
+            {
+              "turn": 3,
+              "question": "有哪些东西值得写进 Memory？",
+              "snippet": "值得写进 Memory",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": null,
+              "note": "文章未覆盖；观察弃答行为，judge"
+            },
+            {
+              "turn": 4,
+              "question": "回到刚才的 Context，所以每次调用都会重新构造？",
+              "snippet": "每次调用都会重新构造",
+              "required": {
+                "A01": 3
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "topic_return"
+              ]
+            }
+          ]
+        },
+        {
+          "scenario_id": "M06",
+          "topic": "用户纠正",
+          "turns": [
+            {
+              "turn": 1,
+              "question": "帮我查找笔记：Tool result 是什么时候进入 context 的？",
+              "snippet": "什么时候进入 context",
+              "required": {
+                "A06": 3
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL"
+            },
+            {
+              "turn": 2,
+              "question": "不对，我问的是 tool definition。",
+              "snippet": "我问的是 tool definition",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "user_correction_following"
+              ]
+            },
+            {
+              "turn": 3,
+              "question": "那为什么它必须比执行结果更早出现？",
+              "snippet": "必须比执行结果更早",
+              "required": {
+                "A06": 3
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "resolved_question": "tool definition 为何必须在 result 之前（它 = tool definition，纠正后状态）",
+              "judge": [
+                "referent_state_update"
+              ]
+            }
+          ]
+        },
+        {
+          "scenario_id": "M05",
+          "topic": "注入错误 assistant 历史",
+          "seed": [
+            {
+              "role": "user",
+              "content": "AGENTS.md 会以什么 role 进入 Codex？"
+            },
+            {
+              "role": "assistant",
+              "content": "它会作为 developer message 进入模型的上下文。",
+              "question": "AGENTS.md 会以什么 role 进入 Codex？"
+            }
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "question": "那既然 Developer 的优先级更高，它是不是一定比普通用户输入更优先？",
+              "snippet": "优先级更高",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": null,
+              "note": "A13 含同样的过时说法，是文档层的坑；judge assistant_error_propagation（0=继承错误，1=纠正或存疑）"
+            }
+          ]
+        },
+        {
+          "scenario_id": "M07",
+          "topic": "框架漂移后重建",
+          "turns": [
+            {
+              "turn": 1,
+              "question": "帮我查找笔记：Agent 的 Context 是怎么构建的？",
+              "snippet": "Context 是怎么构建",
+              "required": {
+                "A01": 3
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL"
+            },
+            {
+              "turn": 2,
+              "question": "对话历史太长会怎样？",
+              "snippet": "对话历史太长会怎样",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL"
+            },
+            {
+              "turn": 3,
+              "question": "压缩会丢什么细节？",
+              "snippet": "压缩会丢什么",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ]
+            },
+            {
+              "turn": 4,
+              "question": "那 memory 呢，和这个是一回事吗？",
+              "snippet": "和这个是一回事吗",
+              "required": {
+                "A05": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL"
+            },
+            {
+              "turn": 5,
+              "question": "所以我现在问到的 memory 这一块，在最开始说的 Context 里面到底处于什么位置？",
+              "snippet": "处于什么位置",
+              "required": {
+                "A11": 3,
+                "A01": 2
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "framework_reconstruction"
+              ]
+            }
+          ]
+        },
+        {
+          "scenario_id": "M08",
+          "topic": "长对话漂移与回归（第4轮起旧轮次进入 digest）",
+          "note": "测 compactMessages 生效后的框架锚定；T9 judge framework_reconstruction",
+          "turns": [
+            {
+              "turn": 1,
+              "question": "帮我查找笔记：Agent 每次调用模型时 context 是怎么构建的？",
+              "snippet": "context 是怎么构建",
+              "required": {
+                "A01": 3
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL"
+            },
+            {
+              "turn": 2,
+              "question": "context 里一般都有哪几类东西？",
+              "snippet": "哪几类东西",
+              "required": {
+                "A02": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL"
+            },
+            {
+              "turn": 3,
+              "question": "对话历史太长了会怎么办？",
+              "snippet": "太长了会怎么办",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL"
+            },
+            {
+              "turn": 4,
+              "question": "压缩会丢掉什么？",
+              "snippet": "压缩会丢掉什么",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ]
+            },
+            {
+              "turn": 5,
+              "question": "那 memory 和这是一回事吗？",
+              "snippet": "和这是一回事吗",
+              "required": {
+                "A05": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL"
+            },
+            {
+              "turn": 6,
+              "question": "memory 里的信息每轮都能被看到吗？",
+              "snippet": "每轮都能被看到吗",
+              "required": {
+                "A05": 3,
+                "A01": 2
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ]
+            },
+            {
+              "turn": 7,
+              "question": "对了，工具的定义和结果是什么时候给模型的？",
+              "snippet": "什么时候给模型的",
+              "required": {
+                "A06": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL"
+            },
+            {
+              "turn": 8,
+              "question": "工具结果能出现在它自己的决策之前吗？",
+              "snippet": "自己的决策之前",
+              "required": {
+                "A06": 3
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ]
+            },
+            {
+              "turn": 9,
+              "question": "回到最开始的 Context——我们后来聊的压缩、memory、工具，各自在 Context 这个框架里处于什么位置？",
+              "snippet": "处于什么位置",
+              "required": {
+                "A01": 3,
+                "A11": 2
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "framework_reconstruction"
+              ],
+              "judge_note": "前 8 轮已 digest 化，看答案能否重建整体框架并安放三个分支"
+            }
+          ]
+        },
+        {
+          "scenario_id": "D1",
+          "topic": "深层痛点：归因错位（一直在整理笔记，困惑在可见性）",
+          "latent_confusion": "模型可见范围由授权文件夹+检索决定，与用户以为的笔记整洁度无关",
+          "surface_symptoms": [
+            "问组织",
+            "问做法",
+            "现象矛盾"
+          ],
+          "expected_reveal_turn": 2,
+          "tags": [
+            "insight-deep",
+            "misdirected-effort"
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "question": "我笔记里课堂笔记和自己的总结混在一起，会不会太乱影响它回答？",
+              "snippet": "会不会太乱影响",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL",
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "表面=组织问题"
+            },
+            {
+              "turn": 2,
+              "question": "那我是不是应该把重要的内容都复制到一个“精华”文件里？",
+              "snippet": "复制到一个",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "latent_question_hit",
+                "misdirected_effort_interception"
+              ],
+              "judge_note": "关键拦截点：不该顺着教用户建精华文件，应指出物理集中解决不了可见性问题"
+            },
+            {
+              "turn": 3,
+              "question": "可是上次它引用了我三个月前的一条旧笔记，我自己都忘了——它怎么看到的？",
+              "snippet": "它怎么看到的",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "现象与用户假设矛盾的时刻，理想=点破检索机制"
+            },
+            {
+              "turn": 4,
+              "question": "所以到底哪些笔记它看得到？我要不要把整个文件夹重新规划一遍？",
+              "snippet": "重新规划一遍",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "latent_question_hit",
+                "misdirected_effort_interception"
+              ],
+              "judge_note": "收束：给出可见性的真实决定因素，阻止重规划的错误努力"
+            }
+          ]
+        },
+        {
+          "scenario_id": "D2",
+          "topic": "深层痛点：操作焦虑（句句问 how，真困惑是 why）",
+          "latent_confusion": "什么决定信息跨轮存活 + 我能不能长期依赖这个工具",
+          "surface_symptoms": [
+            "问清理频率",
+            "问重复告知",
+            "问放置位置"
+          ],
+          "expected_reveal_turn": 2,
+          "tags": [
+            "insight-deep"
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "question": "我该多久清理一次旧对话？",
+              "snippet": "多久清理一次",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL",
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "操作建议层；理想=开始留意这是一串 how"
+            },
+            {
+              "turn": 2,
+              "question": "重要的事是不是每次都得重新说一遍？",
+              "snippet": "重新说一遍",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "理想=在此轮识别出 how 串背后的 why，主动讲一次机制而非继续逐条给操作建议"
+            },
+            {
+              "turn": 3,
+              "question": "要不要把我的要求写在最前面？",
+              "snippet": "写在最前面",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": ""
+            },
+            {
+              "turn": 4,
+              "question": "你们这个是不是用久了就会变笨？",
+              "snippet": "用久了就会变笨",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "latent_question_hit",
+                "misconception_detection"
+              ],
+              "judge_note": "现象级抱怨；真困惑=信任决策，理想=机制解释+校准的信任边界"
+            }
+          ]
+        },
+        {
+          "scenario_id": "D4",
+          "topic": "深层痛点：信任决策（问的全是过去时，担心的是将来时）",
+          "latent_confusion": "我能把多少信任交给它——边界内确定、边界外不确定",
+          "surface_symptoms": [
+            "问出处",
+            "问迁移",
+            "问上限"
+          ],
+          "expected_reveal_turn": 2,
+          "tags": [
+            "insight-deep"
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "question": "上次它引用的那条笔记是哪来的？我不记得写过。",
+              "snippet": "我不记得写过",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 2,
+              "question": "那如果我换台电脑、换个库，它还认识我吗？",
+              "snippet": "换个库",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "表面=数据边界；理想=识别出迁移焦虑背后的信任问题"
+            },
+            {
+              "turn": 3,
+              "question": "我是不是根本不能指望它记住任何东西？",
+              "snippet": "不能指望它记住",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "latent_question_hit",
+                "misconception_detection"
+              ],
+              "judge_note": "理想=给出校准信任：什么依赖安全（授权范围内+检索命中）、什么不安全（跨轮全文记忆）"
+            }
+          ]
+        },
+        {
+          "scenario_id": "C1",
+          "topic": "compaction 丢失：回答末尾的模型自造内容（例子）",
+          "note": "T1 要求例子放在最后说且必须是模型自己举的（笔记里没有）；T5 追问该例子=纯对话记忆",
+          "tags": [
+            "compaction-loss"
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "question": "帮我查找笔记：context 由哪几部分组成？然后给每个部分各举一个你自己的例子，例子统一放在回答最后说。",
+              "snippet": "统一放在回答最后",
+              "required": {
+                "A02": 3
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL",
+              "judge": [],
+              "judge_note": "关键信息（5 个自造例子）只存在于回答末尾，预期超 420 字被 digest 截断"
+            },
+            {
+              "turn": 2,
+              "question": "那对话太长了怎么办？",
+              "snippet": "对话太长",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 3,
+              "question": "memory 和这个是一回事吗？",
+              "snippet": "是一回事吗",
+              "required": {
+                "A05": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 4,
+              "question": "工具的定义和结果是什么时候给模型的？",
+              "snippet": "什么时候给模型的",
+              "required": {
+                "A06": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 5,
+              "question": "回到你最开始举的那些例子——你给“检索注入的外部资料”那一部分举的例子是什么？",
+              "snippet": "举的例子是什么",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": null,
+              "judge": [
+                "conversation_recall"
+              ],
+              "judge_note": "纯对话召回：笔记无此内容；2=准确复述或诚实说窗口外需查，0=否认说过或编造"
+            }
+          ]
+        },
+        {
+          "scenario_id": "C2",
+          "topic": "compaction 丢失：回答末尾的明确建议",
+          "note": "T1 的推荐结论在长回答末尾；T5 用“就按你推荐的来”引用它",
+          "tags": [
+            "compaction-loss"
+          ],
+          "turns": [
+            {
+              "turn": 1,
+              "question": "帮我查找笔记：比较一下滑动窗口和摘要压缩，最后给我一个明确的选择建议，建议放在最后。",
+              "snippet": "建议放在最后",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL",
+              "judge": [],
+              "judge_note": "关键信息=末尾的明确建议（对话独有）"
+            },
+            {
+              "turn": 2,
+              "question": "压缩会丢掉什么细节？",
+              "snippet": "丢掉什么细节",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 3,
+              "question": "memory 里的信息每轮都能被看到吗？",
+              "snippet": "每轮都能被看到",
+              "required": {
+                "A05": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 4,
+              "question": "tool definition 是什么？",
+              "snippet": "tool definition 是什么",
+              "required": {
+                "A06": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 5,
+              "question": "就按你最开始最后推荐的那个方案来——你再说一遍当时为什么推荐它？",
+              "snippet": "当时为什么推荐它",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": null,
+              "judge": [
+                "conversation_recall"
+              ],
+              "judge_note": "引用早期回答末尾的建议；2=准确复述理由，0=编造一个新理由或否认推荐过"
+            }
+          ]
+        },
+        {
+          "scenario_id": "F1",
+          "topic": "隐性框架联系（不问全局，看是否自发联系全局）",
+          "tags": [
+            "framework-implicit"
+          ],
+          "note": "T8 是纯局部细节题；judge implicit_framework: 2=自发把局部点挂回整体框架, 1=仅直接相关时提及, 0=纯局部回答",
+          "turns": [
+            {
+              "turn": 1,
+              "question": "帮我查找笔记：Agent 每次调用模型时 context 是怎么构建的？",
+              "snippet": "context 是怎么构建",
+              "required": {
+                "A01": 3
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 2,
+              "question": "context 里一般都有哪几类东西？",
+              "snippet": "哪几类东西",
+              "required": {
+                "A02": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 3,
+              "question": "对话历史太长了会怎么办？",
+              "snippet": "太长了会怎么办",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 4,
+              "question": "那 memory 和这是一回事吗？",
+              "snippet": "和这是一回事吗",
+              "required": {
+                "A05": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 5,
+              "question": "memory 里的信息每轮都能被看到吗？",
+              "snippet": "每轮都能被看到吗",
+              "required": {
+                "A05": 3,
+                "A01": 2
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 6,
+              "question": "对了，工具的定义和结果是什么时候给模型的？",
+              "snippet": "什么时候给模型的",
+              "required": {
+                "A06": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 7,
+              "question": "压缩会丢什么细节？",
+              "snippet": "压缩会丢什么细节",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 8,
+              "question": "那摘要压缩和滑动窗口，哪个会保留原话？",
+              "snippet": "哪个会保留原话",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "implicit_framework"
+              ],
+              "judge_note": "纯局部细节题：理想答案不只说'滑动窗口保留近期原文'，还应自发点出它属于'容量管理'分支/与最初聊的每轮重建的关系"
+            }
+          ]
+        },
+        {
+          "scenario_id": "F2",
+          "topic": "共识引用（早期共识经多轮漂移后仍被正确调用）",
+          "tags": [
+            "consensus-recall"
+          ],
+          "note": "T2 建立共识（用户明确确认）；T9 judge consensus_recall: 2=准确引用共识并正确应用, 1=重新推导出同结论, 0=编造共识或答错",
+          "turns": [
+            {
+              "turn": 1,
+              "question": "帮我查找笔记：为什么 Memory 里存了信息，模型这一轮却不一定知道？",
+              "snippet": "却不一定知道",
+              "required": {
+                "A05": 3,
+                "A10": 2
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 2,
+              "question": "好，我懂了——存了不等于本轮看得到，对吧？",
+              "snippet": "存了不等于本轮看得到",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": "REUSE_PREVIOUS",
+              "judge": [],
+              "judge_note": "共识建立轮；理想=确认并精确复述边界"
+            },
+            {
+              "turn": 3,
+              "question": "context 里都有哪几类东西？",
+              "snippet": "都有哪几类东西",
+              "required": {
+                "A02": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 4,
+              "question": "对话历史太长会怎么办？",
+              "snippet": "对话历史太长",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 5,
+              "question": "压缩会丢掉什么？",
+              "snippet": "压缩会丢掉什么",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 6,
+              "question": "工具的定义和结果是什么时候给模型的？",
+              "snippet": "什么时候给模型的",
+              "required": {
+                "A06": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 7,
+              "question": "instruction 是什么？",
+              "snippet": "instruction 是什么",
+              "required": {
+                "A02": 3
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 8,
+              "question": "检索结果是不是越多越好？",
+              "snippet": "是不是越多越好",
+              "required": {
+                "A08": 3,
+                "A09": 2
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [],
+              "judge_note": ""
+            },
+            {
+              "turn": 9,
+              "question": "按我们最开始达成一致的“存了不等于本轮看得到”——工具定义每轮都重新放，它算哪一边？",
+              "snippet": "算哪一边",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": [
+                "REUSE_PREVIOUS",
+                "INCREMENTAL_RETRIEVAL"
+              ],
+              "judge": [
+                "consensus_recall"
+              ],
+              "judge_note": "需调出早期共识并正确应用：每轮重放=每轮都被注入=本轮看得到（虽然它也'被存着'）"
+            }
+          ]
+        }
+      ]
+    },
+    "stale": {
+      "phrasing": "imperative + freshness trigger",
+      "note": "只测 freshness trigger（是否触发外部验证动作 / 是否指出内容过时），不对外部内容正确性做断言",
+      "cases": [
+        {
+          "case_id": "ST01",
+          "question": "帮我查找笔记：文章里说 AGENTS.md 会作为 developer message 注入，现在还是这样吗？",
+          "snippet": "现在还是这样吗",
+          "required": {
+            "A13": 3
+          },
+          "hard_negative": {},
+          "expected_action": "RETRIEVAL",
+          "stale": true
+        },
+        {
+          "case_id": "ST02",
+          "question": "帮我查找笔记：那按这篇文章，做 OpenAI 的 Agent 应用应该用 Assistants API 吗？",
+          "snippet": "应该用 Assistants API",
+          "required": {
+            "A13": 3
+          },
+          "hard_negative": {},
+          "expected_action": "RETRIEVAL",
+          "stale": true
+        }
+      ]
+    },
+    "insight": {
+      "phrasing": "natural（真实用户不会说帮我查找笔记）",
+      "note": "潜在困惑/痛点挖掘：用户连续问表面问题（词汇/定义级），答案不算错但没有直击真实困惑。judge 维度 latent_question_hit(0/1/2: 0=每轮只答表面, 1=被直接问到深层时能答, 2=主动重构潜在困惑并放回框架) + misconception_detection。程序化代理：expected_reveal_turn 时刻金标机制块（通常 A01）是否已在证据中——区分检索层失败 vs 生成层浅答。",
+      "scenarios": [
+        {
+          "scenario_id": "L1",
+          "topic": "术语定义 → 机制困惑（问词义，真正想知道它在链路中的作用）",
+          "latent_confusion": "连续性从哪来：模型本身无状态，它记得我 是每轮重新注入 context 制造的错觉；用户隐含假设=模型有持续记忆",
+          "surface_symptoms": [
+            "问词义",
+            "词汇辨析",
+            "细节追问"
+          ],
+          "expected_reveal_turn": 3,
+          "turns": [
+            {
+              "turn": 1,
+              "question": "Compaction 是什么意思？",
+              "snippet": "是什么意思",
+              "required": {
+                "A04": 3
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL",
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "理想：不只给定义，还说明它在 context 管理链路中的角色"
+            },
+            {
+              "turn": 2,
+              "question": "那它和 summarize 是一回事吗？",
+              "snippet": "是一回事吗",
+              "required": {
+                "A04": 2
+              },
+              "hard_negative": {},
+              "expected_action": "REUSE_PREVIOUS",
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "仍在词汇层打转；理想答法=指出这类词都服务于同一个机制问题"
+            },
+            {
+              "turn": 3,
+              "question": "压缩之后，我前面说的话模型还记得吗？",
+              "snippet": "还记得吗",
+              "required": {
+                "A04": 3,
+                "A05": 2
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "真实困惑开始浮出（存续 vs 可见）；理想=在此轮就点破机制"
+            },
+            {
+              "turn": 4,
+              "question": "既然每轮都重新构建 context，为什么我感觉它是记得我的？",
+              "snippet": "记得我的",
+              "required": {
+                "A01": 3,
+                "A04": 2
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [
+                "latent_question_hit",
+                "misconception_detection"
+              ],
+              "judge_note": "必须点名错觉机制（每轮重新注入制造连续性）并指出用户的隐含假设"
+            }
+          ]
+        },
+        {
+          "scenario_id": "L2",
+          "topic": "无状态假设（为什么不能放一次就一直在）",
+          "latent_confusion": "模型=有状态容器的隐含假设；实际是无状态函数 + 每轮重构输入",
+          "surface_symptoms": [
+            "问定义",
+            "问重复放置",
+            "问为什么不持久"
+          ],
+          "expected_reveal_turn": 2,
+          "turns": [
+            {
+              "turn": 1,
+              "question": "笔记里说的 tool definition 是什么？",
+              "snippet": "tool definition 是什么",
+              "required": {
+                "A06": 3
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL"
+            },
+            {
+              "turn": 2,
+              "question": "它每次调用都要重新放进去吗？",
+              "snippet": "重新放进去吗",
+              "required": {
+                "A01": 3,
+                "A06": 2
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "理想：此轮就点破无状态+每轮重构，而不是只回答是"
+            },
+            {
+              "turn": 3,
+              "question": "为什么不能放一次就一直在那儿？",
+              "snippet": "一直在那儿",
+              "required": {
+                "A01": 3
+              },
+              "hard_negative": {},
+              "expected_action": "REUSE_PREVIOUS",
+              "judge": [
+                "latent_question_hit",
+                "misconception_detection"
+              ],
+              "judge_note": "必须重构出用户的容器心智模型并纠正"
+            }
+          ]
+        },
+        {
+          "scenario_id": "L3",
+          "topic": "信息存续的实用规则（连续表面探测后问做法）",
+          "latent_confusion": "用户在拼凑什么决定信息在模型眼里的存续 的规则；真正需要的是统一原理（可见性=本轮被注入）",
+          "surface_symptoms": [
+            "问术语",
+            "问边界情况",
+            "问实用做法"
+          ],
+          "expected_reveal_turn": 3,
+          "turns": [
+            {
+              "turn": 1,
+              "question": "笔记里说的 instruction 是什么？",
+              "snippet": "instruction 是什么",
+              "required": {
+                "A02": 3
+              },
+              "hard_negative": {},
+              "expected_action": "RETRIEVAL"
+            },
+            {
+              "turn": 2,
+              "question": "它会不会也被压缩掉？",
+              "snippet": "也被压缩掉",
+              "required": {},
+              "hard_negative": {
+                "A02": 1,
+                "A04": 1
+              },
+              "expected_action": "REUSE_PREVIOUS",
+              "abstention": true,
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "链路中的弃答：文章没说 instruction 是否参与 compaction，须明说，同时这正是用户困惑的证据"
+            },
+            {
+              "turn": 3,
+              "question": "那我是不是应该把最重要的要求写在每轮都看得到的地方？",
+              "snippet": "每轮都看得到的地方",
+              "required": {
+                "A01": 2,
+                "A02": 2,
+                "A04": 2
+              },
+              "hard_negative": {},
+              "expected_action": "INCREMENTAL_RETRIEVAL",
+              "judge": [
+                "latent_question_hit",
+                "conceptual_positioning"
+              ],
+              "judge_note": "理想：给出统一原理+承认文章没写具体做法+建议标注为推断；把三轮表面问题串成一条线"
+            }
+          ]
+        }
+      ]
+    },
+    "reader_notes": {
+      "phrasing": "natural（用户不会说『注入了摘录』这类词）",
+      "note": "Reader Notes 读侧验收：新对话打开锚点文档时，插件经 resolvedLinks 反查 + 文档保存区，把已保存摘录（用户人工确认的认知）按预算注入系统提示。RN1=认知延续（改述命中最新确认的个人原则）；RN2=纠正持久化（元问题『我之前纠正过什么』只有注入通道可答，且要求与原文观点区分、给出日期）。程序化检查：trace metadata readerNotes.injected>=1；夹具 companion 笔记由 runner 场景前创建、场景后删除（5 块摘录，故意超预算以同时验收截断形态）。",
+      "scenarios": [
+        {
+          "scenario_id": "RN1",
+          "topic": "认知延续：改述命中个人原则（最新摘录 09-28）",
+          "latent_confusion": "用户记得自己定过原则但不记得内容；期望答案复述『锚点提纲先行、细节才可摘要』并作为『你之前确认过的』呈现，而不是当作文章内容",
+          "fixture_note_path": "Reading notes/Understanding Context Windows/AI conversations.md",
+          "fixture_note": "### 2026-09-10 09:41 · Understanding Context Windows\n\nSource: [[Reading notes/Understanding Context Windows#A context window is the fixed amount of text|Understanding Context Windows]] · lines 3-3\n\n> [!quote]- Selected source passage\n> A context window is the fixed amount of text a language model can consider at once.\n\n> [!question] Question\n> 窗口是固定大小的吗，还是模型自己会伸缩？\n\n> [!quote] Confirmed AI excerpt\n> 固定：窗口大小由模型版本一次性决定，不随对话长短伸缩。会话变长只会让占用率上升，装不下时才需要压缩或裁剪，而不是窗口自己变大。所以\"感觉它能记住越来越多\"是错觉——本质是每轮重建 context 时塞进了更多历史文本，窗口本身的容量从第一轮起就没变过。这个理解后来也解释了为什么压缩（把老对话摘要成短文）是唯一现实的省空间手段：容量不能变大，就只能让占位的东西变小。另一个当时想明白的点：窗口占用率高不等于记忆强——它只说明历史文本堆得多，模型对每段内容的注意力反而被摊薄，这也是我后来坚持先摘要后扩写的直接原因。\n\n### 2026-09-12 15:03 · Understanding Context Windows\n\nSource: [[Reading notes/Understanding Context Windows#Retrieval quality matters more than retrieval volume|Understanding Context Windows]] · lines 5-5\n\n> [!quote]- Selected source passage\n> Retrieval quality matters more than retrieval volume: a small set of relevant passages beats a large noisy one.\n\n> [!question] Question\n> Retrieval 一词在这里指什么？\n\n> [!quote] Confirmed AI excerpt\n> 指从外部材料（我的笔记、检索器返回的段落）取内容填进上下文窗口，与模型参数里训练来的\"知识\"相对。检索解决的是\"这一轮该把哪几段原文放进窗口\"，而不是\"模型知不知道\"。结论是质量优先于数量：三段高相关的段落胜过十段沾边的噪声，多而杂的检索结果反而稀释了窗口里的有效信号，让模型更难分辨哪段才是回答该依赖的证据。之后我调整了习惯：检索词先按问题的机制词走一轮，缺什么再补一轮定向词，两轮封顶，宁缺毋滥。还有一条配套约束：检索回来的段落必须当场判断去留，犹豫的段落宁可退回重新检索，也不留在窗口里充数——这后来成了我判断检索质量的实际手感。\n\n### 2026-09-15 21:17 · Understanding Context Windows\n\nSource: [[Reading notes/Understanding Context Windows#Context management is allocation|Understanding Context Windows]] · lines 7-7\n\n> [!quote]- Selected source passage\n> Context management is allocation: decide what earns a place in the window.\n\n> [!question] Question\n> 为什么说 context management 是 allocation？\n\n> [!quote] Confirmed AI excerpt\n> 因为窗口是稀缺资源：近端对话、开头定下的框架锚点、检索来的证据，全都在争同一份空间。管理上下文就是持续决定\"什么配得上占位\"——被裁掉的老对话、被摘要掉的细节，本质都是把空间让给当前更重要的内容。我认同这个\"分配\"视角：它把上下文管理从\"怎么保存历史\"变成了\"怎么花预算\"，每个位置都要挣得其存在。顺着这个视角看，摘录、锚点、检索证据其实是三类不同的\"支出\"：锚点是固定成本，近端对话是变动成本，检索证据是按需采购——预算思维比保存思维更贴切。当时还留了一个观察：三类支出的优先级并不是固定的，追问密集时近端对话权重自然上升，冷启动时锚点权重最高，这个动态排序本身就是一门手艺。\n\n### 2026-09-24 11:40 · Understanding Context Windows\n\nSource: [[Reading notes/Understanding Context Windows#Retrieval quality matters more than retrieval volume|Understanding Context Windows]] · lines 5-5\n\n> [!quote]- Selected source passage\n> Retrieval quality matters more than retrieval volume: a small set of relevant passages beats a large noisy one.\n\n> [!question] Question\n> \"检索质量比数量重要\"，那是不是证据越少越好？\n\n> [!quote] Confirmed AI excerpt\n> 纠正我之前的理解：不是越少越好。跨小节的问题在小集合下会漏关键证据。我确认的做法：先取两三条高相关段落，检查能否支撑完整的证据链，不齐就再补一次定向检索，直到凑齐\"最小充分证据集合\"为止——数量服务于充分性，不是越少越光荣。这条是对本文\"quality over volume\"的限定，不是本文原文的表述。补一句当时的动因：那几天连续两个问题都因为证据取太少而答偏，才让我把\"少\"从优点改判成风险。\n\n### 2026-09-28 20:05 · Understanding Context Windows\n\nSource: [[Reading notes/Understanding Context Windows#Context management is allocation|Understanding Context Windows]] · lines 7-7\n\n> [!quote]- Selected source passage\n> Context management is allocation: decide what earns a place in the window.\n\n> [!question] Question\n> 长对话把窗口快占满时，我的处理原则是什么？\n\n> [!quote] Confirmed AI excerpt\n> 我确认的原则：先写锚点提纲，再压缩。把开头定下的框架和关键约束写成短锚点保留，早期细节才允许被摘要掉。理由：我的提问经常回跳到开头的框架上，丢框架的代价远大于丢细节——锚点保住的是\"回得去\"，摘要只处理\"回不去也不太疼\"的部分。这是我自己定的操作原则，不是文章里的通用结论。附带一个执行细节：锚点写完就固定不动，摘要每次重做——混在一起会导致锚点内容被摘要悄悄改写，这条教训当时也记在这里。\n",
+          "turns": [
+            {
+              "turn": 1,
+              "question": "接着读这篇。老对话挤占窗口空间的时候，我给自己定过一条处理原则，是哪条来着？",
+              "snippet": "一条处理原则",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": null,
+              "judge": [
+                "cognition_continuity"
+              ],
+              "judge_note": "理想：复述锚点提纲先行/保留框架、细节才摘要的原则，标注为用户此前（09-28）确认过的认知；程序化：readerNotes.injected>=1 且 count=5"
+            }
+          ]
+        },
+        {
+          "scenario_id": "RN2",
+          "topic": "纠正持久化：元问题『我纠正过什么』（摘录 09-24，与原文观点冲突）",
+          "latent_confusion": "用户问的是自己对文章观点的纠正史；期望答案给出纠正后口径（最小充分证据集合、不足就补定向检索），标明这是用户此前确认的摘录而非原文，冲突时点破并带日期",
+          "fixture_note_path": "Reading notes/Understanding Context Windows/AI conversations.md",
+          "fixture_note": "### 2026-09-10 09:41 · Understanding Context Windows\n\nSource: [[Reading notes/Understanding Context Windows#A context window is the fixed amount of text|Understanding Context Windows]] · lines 3-3\n\n> [!quote]- Selected source passage\n> A context window is the fixed amount of text a language model can consider at once.\n\n> [!question] Question\n> 窗口是固定大小的吗，还是模型自己会伸缩？\n\n> [!quote] Confirmed AI excerpt\n> 固定：窗口大小由模型版本一次性决定，不随对话长短伸缩。会话变长只会让占用率上升，装不下时才需要压缩或裁剪，而不是窗口自己变大。所以\"感觉它能记住越来越多\"是错觉——本质是每轮重建 context 时塞进了更多历史文本，窗口本身的容量从第一轮起就没变过。这个理解后来也解释了为什么压缩（把老对话摘要成短文）是唯一现实的省空间手段：容量不能变大，就只能让占位的东西变小。另一个当时想明白的点：窗口占用率高不等于记忆强——它只说明历史文本堆得多，模型对每段内容的注意力反而被摊薄，这也是我后来坚持先摘要后扩写的直接原因。\n\n### 2026-09-12 15:03 · Understanding Context Windows\n\nSource: [[Reading notes/Understanding Context Windows#Retrieval quality matters more than retrieval volume|Understanding Context Windows]] · lines 5-5\n\n> [!quote]- Selected source passage\n> Retrieval quality matters more than retrieval volume: a small set of relevant passages beats a large noisy one.\n\n> [!question] Question\n> Retrieval 一词在这里指什么？\n\n> [!quote] Confirmed AI excerpt\n> 指从外部材料（我的笔记、检索器返回的段落）取内容填进上下文窗口，与模型参数里训练来的\"知识\"相对。检索解决的是\"这一轮该把哪几段原文放进窗口\"，而不是\"模型知不知道\"。结论是质量优先于数量：三段高相关的段落胜过十段沾边的噪声，多而杂的检索结果反而稀释了窗口里的有效信号，让模型更难分辨哪段才是回答该依赖的证据。之后我调整了习惯：检索词先按问题的机制词走一轮，缺什么再补一轮定向词，两轮封顶，宁缺毋滥。还有一条配套约束：检索回来的段落必须当场判断去留，犹豫的段落宁可退回重新检索，也不留在窗口里充数——这后来成了我判断检索质量的实际手感。\n\n### 2026-09-15 21:17 · Understanding Context Windows\n\nSource: [[Reading notes/Understanding Context Windows#Context management is allocation|Understanding Context Windows]] · lines 7-7\n\n> [!quote]- Selected source passage\n> Context management is allocation: decide what earns a place in the window.\n\n> [!question] Question\n> 为什么说 context management 是 allocation？\n\n> [!quote] Confirmed AI excerpt\n> 因为窗口是稀缺资源：近端对话、开头定下的框架锚点、检索来的证据，全都在争同一份空间。管理上下文就是持续决定\"什么配得上占位\"——被裁掉的老对话、被摘要掉的细节，本质都是把空间让给当前更重要的内容。我认同这个\"分配\"视角：它把上下文管理从\"怎么保存历史\"变成了\"怎么花预算\"，每个位置都要挣得其存在。顺着这个视角看，摘录、锚点、检索证据其实是三类不同的\"支出\"：锚点是固定成本，近端对话是变动成本，检索证据是按需采购——预算思维比保存思维更贴切。当时还留了一个观察：三类支出的优先级并不是固定的，追问密集时近端对话权重自然上升，冷启动时锚点权重最高，这个动态排序本身就是一门手艺。\n\n### 2026-09-24 11:40 · Understanding Context Windows\n\nSource: [[Reading notes/Understanding Context Windows#Retrieval quality matters more than retrieval volume|Understanding Context Windows]] · lines 5-5\n\n> [!quote]- Selected source passage\n> Retrieval quality matters more than retrieval volume: a small set of relevant passages beats a large noisy one.\n\n> [!question] Question\n> \"检索质量比数量重要\"，那是不是证据越少越好？\n\n> [!quote] Confirmed AI excerpt\n> 纠正我之前的理解：不是越少越好。跨小节的问题在小集合下会漏关键证据。我确认的做法：先取两三条高相关段落，检查能否支撑完整的证据链，不齐就再补一次定向检索，直到凑齐\"最小充分证据集合\"为止——数量服务于充分性，不是越少越光荣。这条是对本文\"quality over volume\"的限定，不是本文原文的表述。补一句当时的动因：那几天连续两个问题都因为证据取太少而答偏，才让我把\"少\"从优点改判成风险。\n\n### 2026-09-28 20:05 · Understanding Context Windows\n\nSource: [[Reading notes/Understanding Context Windows#Context management is allocation|Understanding Context Windows]] · lines 7-7\n\n> [!quote]- Selected source passage\n> Context management is allocation: decide what earns a place in the window.\n\n> [!question] Question\n> 长对话把窗口快占满时，我的处理原则是什么？\n\n> [!quote] Confirmed AI excerpt\n> 我确认的原则：先写锚点提纲，再压缩。把开头定下的框架和关键约束写成短锚点保留，早期细节才允许被摘要掉。理由：我的提问经常回跳到开头的框架上，丢框架的代价远大于丢细节——锚点保住的是\"回得去\"，摘要只处理\"回不去也不太疼\"的部分。这是我自己定的操作原则，不是文章里的通用结论。附带一个执行细节：锚点写完就固定不动，摘要每次重做——混在一起会导致锚点内容被摘要悄悄改写，这条教训当时也记在这里。\n",
+          "turns": [
+            {
+              "turn": 1,
+              "question": "关于『证据是不是越少越好』，我之前是不是纠正过一个想法？当时纠正成了什么样？",
+              "snippet": "纠正过一个想法",
+              "required": {},
+              "hard_negative": {},
+              "expected_action": null,
+              "judge": [
+                "correction_recall",
+                "cognition_vs_article_distinction"
+              ],
+              "judge_note": "理想：给出 09-24 摘录的纠正口径（不是越少越好→最小充分证据集合/补定向检索），并区分『你的摘录』与『文章原文』；只答原文观点=未通过"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

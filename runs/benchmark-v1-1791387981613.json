@@ -1,0 +1,2124 @@
+{
+  "startedAt": "2026-10-07T15:14:11.632Z",
+  "model": "kimi-k3",
+  "suites": {
+    "core": [
+      {
+        "case_id": "S01",
+        "question": "帮我查找笔记：模型决定要不要调用工具的时候，已经能看到工具执行结果了吗？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "根据刚检索到的笔记，答案很明确：**看不到**。\n\n**笔记中的事实依据**（来自 [[Reading notes/Agent Context Engineering 基准.md#A08 Relevant 不等于 Useful]]）：\n\n> 问题是\"模型在决定调用工具时能看到工具执行结果吗\"，下面两个片段都与\"工具\"相关：一个是\"Tools allow agents to interact with external systems\"，另一个是\"Tool results are produced only after execution\"。但**真正能解决问题的是第二条**。\n\n也就是说，笔记里明确指出：**工具执行结果（tool result）是在工具执行之后才产生的**。因此：\n\n- 模型在**决定是否调用工具**时，能看到的只有对话历史、用户输入和 tool definition（工具的描述/参数说明），此时结果尚不存在；\n- 只有当模型发出调用、工具实际执行完毕后，结果才会作为新内容追加进 context，供模型**下一轮**生成时使用。\n\n**顺带一提笔记里的方法论提醒**：这条笔记本身就是在强调\"Relevant ≠ Useful\"——检索时不能只找\"提到工具\"的片段，而要找真正包含因果/时序信息的证据片段。上面第二条（\"Tool results are produced only after execution\"）才是直接回答你问题的证据。\n\n⚠️ 需要注意：该笔记的 epistemic status 标记为 unverified（未经核实），如果你有原始阅读材料，建议对照原文确认这个结论。另外，本次检索到的另一条笔记（[[Reading notes/编程语言中的上下文.md#执行上下文]]）讲的是 JavaScript 调用栈的执行上下文，与你的问题无关。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/ea18f3b2c77b92a72c5b83d7515e45c5",
+        "session_id": "85",
+        "turn_index": "1",
+        "resolved_query": "模型决定要不要调用工具的时候，已经能看到工具执行结果了吗？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/编程语言中的上下文.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 963,
+          "output": 365
+        },
+        "duration_ms": 11728,
+        "message_count": 5,
+        "metrics": {
+          "k": 2,
+          "retrieved_chunks": [
+            "A08",
+            "OTHER:编程语言中的上下文"
+          ],
+          "bench_chunks": [
+            "A08"
+          ],
+          "other_notes": [
+            "编程语言中的上下文"
+          ],
+          "recall": 0,
+          "hnr": null,
+          "mrr": 0,
+          "ndcg": 0,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": true,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A08 Relevant 不等于 Useful",
+            "ok": true,
+            "reason": ""
+          },
+          {
+            "path": "Reading notes/编程语言中的上下文.md",
+            "heading": "执行上下文",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true
+      },
+      {
+        "case_id": "S02",
+        "question": "帮我查找笔记：聊得越来越久以后，是不是之前每句话都会原封不动塞进下一次调用？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "我查了笔记，坦率地说：**笔记里没有直接回答这个问题的条目**。这次检索到的两条（上下文无关文法、康奈尔笔记法）都和你的问题无关。\n\n不过，之前为你查\"语义相似度\"问题时检索到的一条笔记里，有一段可以作为间接线索：\n\n在 [[Reading notes/Agent Context Engineering 基准.md#A07 Semantic Retrieval|Agent Context Engineering 基准 › A07 Semantic Retrieval]] 中，举例时引用了这样一句话：\n\n> \"older messages can be summarized when context becomes long\"（当上下文变长时，较早的消息可以被摘要）\n\n**基于这条线索可以做的推断（注意这是我的推断，不是笔记的直接结论）：**\n\n- 所以答案大概率是：**不是**。对话变长后，之前每句话并不一定原封不动塞进下一次调用——至少这段引文暗示系统可能会对旧消息做摘要（summarize），而不是逐字保留。\n- 这也符合一个基本常识：模型的上下文窗口长度有限，如果每句话都无限累积原样塞入，迟早会超出上限，所以实践中通常需要摘要、截断或选择性保留等策略。\n\n**但要提醒两点局限：**\n\n1. 这条笔记的身份标注为 unknown、可信度为\"未验证\"（unverified），而且那句话只是笔记里举的一个例子，不是专门论述上下文管理的章节。\n2. 具体到你正在用的某个系统到底怎么处理旧消息（摘要？截断？全部保留？），你的笔记里没有覆盖，我无法据此断言。\n\n如果你想确认，可以看看笔记里有没有专门讲 context window 或上下文工程的条目，或者告诉我你关心的是哪个具体系统，我们可以再针对性地查一次。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/15f20f59cfd7356b853d7841a39021c2",
+        "session_id": "86",
+        "turn_index": "1",
+        "resolved_query": "聊得越来越久以后，是不是之前每句话都会原封不动塞进下一次调用？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/间隔重复.md",
+          "Reading notes/编程语言中的上下文.md",
+          "Reading notes/笔记方法对比.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 2410,
+          "output": 673
+        },
+        "duration_ms": 18477,
+        "message_count": 7,
+        "metrics": {
+          "k": 4,
+          "retrieved_chunks": [
+            "A07",
+            "OTHER:编程语言中的上下文",
+            "OTHER:笔记方法对比",
+            "OTHER:间隔重复"
+          ],
+          "bench_chunks": [
+            "A07"
+          ],
+          "other_notes": [
+            "编程语言中的上下文",
+            "笔记方法对比",
+            "间隔重复"
+          ],
+          "recall": 0.5,
+          "hnr": null,
+          "mrr": 1,
+          "ndcg": 0.3373519727104165,
+          "precision": 0.25,
+          "noise_ratio": 0.75
+        },
+        "evidence": "Source: [[Reading notes/编程语言中的上下文.md#上下文无关文法|编程语言中的上下文 › 上下文无关文法]]\nIdentity: unknown\nEpistemic status: unverified\n## 上下文无关文法\n\n上下文无关文法（CFG）是形式语言理论中的概念：一条产生式规则无论被什么符号包围都适用，与\"上下文\"无关。编程语言的语法大多用 CFG 描述，例如表达式规则 `expr → expr + term`。\n\n---\n\nSource: [[Reading notes/笔记方法对比.md#康奈尔笔记法|笔记方法对比 › 康奈尔笔记法]]\nIdentity: unknown\nEpistemic status: unverified\n## 康奈尔笔记法\n\n康奈尔笔记法把一页纸分成三栏：右侧笔记栏记录主要内容，左侧线索栏写关键词和提问，底部摘要栏用自己的话总结整页。课后按\"5R\"流程使用：记录（Record）、简化（Reduce）、背诵（Recite）、反思（Reflect）、复习（Review）。适合课堂听讲和阅读系统性教材。",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": true,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A07 Semantic Retrieval",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true
+      },
+      {
+        "case_id": "S03",
+        "question": "帮我查找笔记：和问题主题相关的内容，是不是都应该给模型？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "根据这次检索到的笔记，答案是：**不应该**。我把笔记里的依据和你的选段分开说明：\n\n## 笔记里的依据\n\n[[Reading notes/Agent Context Engineering 基准.md#A08 Relevant 不等于 Useful|Agent Context Engineering 基准 › A08 Relevant 不等于 Useful]] 这一节直接回答了这个问题：\n\n- 一个 chunk 和问题**主题相关**，并不意味着它能**帮助回答问题**。\n- 笔记里举了个例子：问题是\"模型在决定调用工具时能看到工具执行结果吗\"，有两个片段都与\"工具\"相关——\n  - \"Tools allow agents to interact with external systems\"（相关但没用）\n  - \"Tool results are produced only after execution\"（相关且能真正作答）\n- 因此笔记建议区分三个层次：**topic relevance（主题相关）**、**answer utility（答题效用）**、**evidence sufficiency（证据充分性）**。\n\n## 你选中的这段也在说同一件事\n\n你选的原文是：\n\n> Retrieval quality matters more than retrieval volume: a small set of relevant passages beats a large noisy one.\n\n即\"检索质量比检索数量更重要：一小撮真正相关的段落，胜过一大包带噪声的内容\"。这从\"数量 vs 质量\"的角度补充了笔记的观点——把主题相关的内容全部塞给模型，会引入噪声，反而降低效果。\n\n## 我的一点推断（不是笔记原文）\n\n把这两者合起来可以得出一个可操作的筛选逻辑，这属于我的推断：\n\n1. 先按**主题相关**粗筛；\n2. 再按\"**能否真正支撑答案**\"精筛；\n3. 只把通过第二关的少量内容交给模型。\n\n## 检索说明\n\n这次还检索到了 [[Reading notes/笔记方法对比.md#康奈尔笔记法|笔记方法对比 › 康奈尔笔记法]]，但它讲的是课堂笔记的记录方法，与你的问题无关，我列出它只是为了说明检索结果里本身就存在\"相关度低\"的内容——这恰好印证了上面的观点。另外需要提醒：检索到的笔记标注为\"unverified\"（未验证），你使用结论时可以留意这一点。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/2f6d861a251c65064c5caebb7e7350fb",
+        "session_id": "87",
+        "turn_index": "1",
+        "resolved_query": "和问题主题相关的内容，是不是都应该给模型？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/笔记方法对比.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 1009,
+          "output": 508
+        },
+        "duration_ms": 17186,
+        "message_count": 5,
+        "metrics": {
+          "k": 2,
+          "retrieved_chunks": [
+            "A08",
+            "OTHER:笔记方法对比"
+          ],
+          "bench_chunks": [
+            "A08"
+          ],
+          "other_notes": [
+            "笔记方法对比"
+          ],
+          "recall": 0.5,
+          "hnr": 0,
+          "mrr": 1,
+          "ndcg": 0.6131471927654584,
+          "precision": 0.5,
+          "noise_ratio": 0.5
+        },
+        "evidence": "",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": true,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A08 Relevant 不等于 Useful",
+            "ok": true,
+            "reason": ""
+          },
+          {
+            "path": "Reading notes/笔记方法对比.md",
+            "heading": "康奈尔笔记法",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true
+      },
+      {
+        "case_id": "S04",
+        "question": "帮我查找笔记：为什么 Memory 里明明保存了信息，模型这一轮却不一定知道？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "根据本次检索到的笔记，[[Reading notes/Agent Context Engineering 基准.md#A10 Multi-hop 与 Chunk Boundary|Agent Context Engineering 基准 › A10 Multi-hop 与 Chunk Boundary]] 恰好用这个例子说明了答案——而且它本身是一个\"多片段证据链\"的示例，答案不来自单一片段，而是两个事实的组合：\n\n**笔记中给出的两个片段事实：**\n\n1. **Memory 可以跨 interaction 保存信息** —— 它确实\"存住了\"内容，这一点没有错。\n2. **Current context 只包含这一轮被注入的信息** —— 模型每一轮能看到的，只有这次被放进 context 的东西。\n\n**推理（把两个片段联合起来）：**\n\n模型的\"知道\"只取决于当前 context 里有什么。信息保存在 memory 中，只说明它*存在于某个存储位置*，并不自动等于它*被注入了这一轮的 context*。所以：\n\n- Memory 里有 ✓（事实 1）\n- 但这一轮 context 里没有（事实 2）\n- 因此模型这一轮表现上就像\"不知道\"\n\n**这也呼应了你选中的那段话：** \"Retrieval quality matters more than retrieval volume\"。模型答得对不对，关键不在于 memory 里存了多少，而在于这一轮是否精准地把*相关*内容取回来注入了 context。存了 ≠ 看到了。\n\n需要注意：这条笔记的 epistemic status 标注为 unverified（未核实），以上是笔记中的说法加上由它直接推出的解释。如果你想进一步确认\"哪些内容会被注入 context、以什么机制注入\"，我目前检索到的笔记里没有更具体的实现细节，可以告诉我再帮你查。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/5b4d7ebb9adcacef9ba68032f4db36b4",
+        "session_id": "88",
+        "turn_index": "1",
+        "resolved_query": "为什么 Memory 里明明保存了信息，模型这一轮却不一定知道？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/编程语言中的上下文.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 987,
+          "output": 471
+        },
+        "duration_ms": 14608,
+        "message_count": 5,
+        "metrics": {
+          "k": 2,
+          "retrieved_chunks": [
+            "A10",
+            "OTHER:编程语言中的上下文"
+          ],
+          "bench_chunks": [
+            "A10"
+          ],
+          "other_notes": [
+            "编程语言中的上下文"
+          ],
+          "recall": 0.5,
+          "hnr": null,
+          "mrr": 1,
+          "ndcg": 0.6131471927654584,
+          "precision": 0.5,
+          "noise_ratio": 0.5
+        },
+        "evidence": "",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": true,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A10 Multi-hop 与 Chunk Boundary",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true
+      },
+      {
+        "case_id": "S05",
+        "question": "帮我查找笔记：Developer instruction 在 context compaction 时是不是一定不会被压缩？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "## 基于笔记能确认的事实\n\n这次检索到的笔记里，只有 [[Reading notes/Agent Context Engineering 基准.md#A04 Conversation History 与 Compaction|Agent Context Engineering 基准 › A04 Conversation History 与 Compaction]] 直接谈 compaction，它的要点是：\n\n- 压缩对象是**较早的 conversation history**（对话历史），把部分历史转成摘要或结构化状态；\n- 目标是「保留当前任务需要的信息，而不是完整保存所有历史文字」。\n\n笔记中另一段 [[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]] 讲的是编程语言的执行上下文，与本问题无关。\n\n## 笔记没有覆盖的部分\n\n你的问题是「**Developer instruction 在 compaction 时是不是一定不会被压缩**」——笔记里**没有**直接讨论 developer instruction / system prompt 这类内容的处理规则。A04 只说了对话历史会被压缩，没有说哪些部分（如 developer instruction、系统提示）被排除在压缩之外。\n\n## 可以做的一个谨慎推断（非笔记原文）\n\n- 从 A04 的描述看，compaction 的作用域被限定为「conversation history」，这**暗示**指令类内容不属于被压缩的对象；\n- 但「是不是**一定**不会被压缩」这种强保证，笔记里没有给出依据。不同实现的策略可能不同，不能仅凭这段笔记下结论。\n\n## 建议\n\n如果你的笔记库里有专门讲 context window 结构或 system/developer prompt 的章节（比如之前你问过的 Reading notes/Understanding Context Windows.md 相关笔记），可以再针对那个方向查证；当前这轮检索返回的材料不足以回答「一定不会被压缩」这个强命题。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/8e61a5a0f9a664f3c320f27db4db4c75",
+        "session_id": "89",
+        "turn_index": "1",
+        "resolved_query": "Developer instruction 在 context compaction 时是不是一定不会被压缩？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/编程语言中的上下文.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 2160,
+          "output": 573
+        },
+        "duration_ms": 21140,
+        "message_count": 7,
+        "metrics": {
+          "k": 2,
+          "retrieved_chunks": [
+            "A04",
+            "OTHER:编程语言中的上下文"
+          ],
+          "bench_chunks": [
+            "A04"
+          ],
+          "other_notes": [
+            "编程语言中的上下文"
+          ],
+          "recall": null,
+          "hnr": 0.5,
+          "mrr": null,
+          "ndcg": null,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "The requested local passages were already supplied earlier in this run, or the shared local evidence character budget has been reached. Reuse the existing evidence.",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": true,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A04 Conversation History 与 Compaction",
+            "ok": true,
+            "reason": ""
+          },
+          {
+            "path": "Reading notes/编程语言中的上下文.md",
+            "heading": "执行上下文",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true,
+        "abstain_ok": true
+      },
+      {
+        "case_id": "S06",
+        "question": "帮我查找笔记：我已经选中了一个段落，回答时是不是就没有必要再搜全文了？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "根据你笔记中 [[Reading notes/Agent Context Engineering 基准.md#A03 Selected Passage|Agent Context Engineering 基准 › A03 Selected Passage]] 的内容，答案是：**不是的，选中段落不等于不用再检索全文**。\n\n笔记里明确区分了两件事：\n\n1. **选中段落是一个\"很强的语义信号\"**——它告诉系统当前问题大概率发生在哪个知识区域，所以它能帮系统快速定位方向。\n2. **但它应当被视为 anchor（锚点），而不是唯一事实来源**——笔记特别指出：\"如果文章其他位置存在定义、限定条件、反例或者更新说明，系统仍然应该检索全文。\"\n\n也就是说，你选中的那段话回答的是\"问题大概在哪里\"，但不能保证那段话本身就包含完整答案。一个很常见的风险是：你选中的句子可能是结论，而它的前提条件、例外情况或者后续的更正说明写在文章的其他地方——只看选中段落就会漏掉这些，得到片面甚至误导性的回答。\n\n所以合理的理解是：**选中段落负责定位，全文检索负责补全**。两者配合，才能既快又完整地回答问题。\n\n顺带一提，这也正是你当前这个回答方式在实践中的体现：这次回答就是基于刚才检索到的笔记内容给出的，而不是凭空推断。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/5b3a5110410d2d2aab3b75dce38bdad1",
+        "session_id": "90",
+        "turn_index": "1",
+        "resolved_query": "我已经选中了一个段落，回答时是不是就没有必要再搜全文了？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/笔记方法对比.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 967,
+          "output": 351
+        },
+        "duration_ms": 9313,
+        "message_count": 5,
+        "metrics": {
+          "k": 2,
+          "retrieved_chunks": [
+            "A03",
+            "OTHER:笔记方法对比"
+          ],
+          "bench_chunks": [
+            "A03"
+          ],
+          "other_notes": [
+            "笔记方法对比"
+          ],
+          "recall": 1,
+          "hnr": null,
+          "mrr": 1,
+          "ndcg": 1,
+          "precision": 0.5,
+          "noise_ratio": 0.5
+        },
+        "evidence": "",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": true,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A03 Selected Passage",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true
+      },
+      {
+        "case_id": "S07",
+        "question": "帮我查找笔记：如果最相关的片段只能回答问题的一半，还应该坚持只用它吗？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "timeout",
+        "answer": "",
+        "error": "timeout"
+      },
+      {
+        "case_id": "S08",
+        "question": "帮我查找笔记：和问题语义最相似的 chunk，是不是一定应该排第一？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "不一定。\n\n**笔记中的直接依据：**  \n[[Reading notes/Agent Context Engineering 基准.md#A10 Multi-hop 与 Chunk Boundary|Agent Context Engineering 基准 › A10 Multi-hop 与 Chunk Boundary]] 明确指出，有些答案不存在于单一片段中；多片段检索的目标不是找到“最像问题的一个 chunk”，而是找到完整的 **evidence chain（证据链）**。\n\n**你选中的原句也支持这一原则：**  \n> Retrieval quality matters more than retrieval volume: a small set of relevant passages beats a large noisy one.\n\n**可以这样理解：**\n\n- 如果一个 chunk 能独立、直接地回答完整问题，那么它通常应该排在前面。\n- 但如果问题需要多步推理，语义上最相似的 chunk 可能只覆盖问题的一部分。另一个表面相似度较低、却能补足证据链的 chunk，可能更值得排在第一或并列提供。\n- 因此，排序标准不应只有“与问题的语义相似度”，还应考虑：**回答覆盖率、证据完整性、片段之间的互补性，以及能否形成完整证据链**。\n\n**结论：**语义最相似的 chunk 是一个很重要的候选，但不应该无条件排第一。语义相似度更适合作为初步筛选信号，而不是唯一排序依据。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/4f91e9ba62391e448903e608bd5a63e0",
+        "session_id": "92",
+        "turn_index": "1",
+        "resolved_query": "和问题语义最相似的 chunk，是不是一定应该排第一？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/编程语言中的上下文.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 968,
+          "output": 589
+        },
+        "duration_ms": 19694,
+        "message_count": 5,
+        "metrics": {
+          "k": 2,
+          "retrieved_chunks": [
+            "A10",
+            "OTHER:编程语言中的上下文"
+          ],
+          "bench_chunks": [
+            "A10"
+          ],
+          "other_notes": [
+            "编程语言中的上下文"
+          ],
+          "recall": 0,
+          "hnr": 0,
+          "mrr": 0,
+          "ndcg": 0,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": true,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A10 Multi-hop 与 Chunk Boundary",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true
+      }
+    ],
+    "routing": [
+      {
+        "case_id": "R01",
+        "question": "笔记里说的 context window 是什么？为什么会有这个上限？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "先说清楚我这次检索到的情况：我在你的笔记库中检索了 \"context window\" 相关内容，但返回的结果只有一条关于\"上下文无关文法\"的笔记（[[Reading notes/编程语言中的上下文.md#上下文无关文法|编程语言中的上下文 › 上下文无关文法]]），它讲的是编程语言形式语法，和你的问题无关。你之前问过问题的那条笔记 Reading notes/Understanding Context Windows.md 这次**没有被检索到**，所以我无法直接引用它里面对 context window 的原文定义。\n\n下面我把能确认的和一般性解释分开说：\n\n## 笔记中能支撑的内容（来源事实）\n\n之前检索到的这条笔记虽然讲的是 Context 而不是 Context Window，但有直接关系：\n\n> 一次模型调用时，模型并不是直接读取应用的全部状态，而是由应用或 Agent Runtime 为这一轮调用构造一个输入上下文……某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n> ——[[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]\n\n也就是说：**context 是单次调用时喂给模型的那份输入**，而不是系统里存着的全部信息。\n\n## 基于常识的一般性解释（非笔记原文，请注意区分）\n\n在这个基础上，context window（上下文窗口）通常指：\n\n1. **定义**：模型单次调用能处理的输入（有时加上输出）的最大长度，一般以 token 为单位计量。比如\"128K context window\"就是这一轮调用最多能容纳约 12.8 万个 token。\n2. **为什么有上限**：\n   - **计算成本**：Transformer 的注意力机制中，序列越长，计算和显存开销增长很快（标准注意力近似随长度平方增长），窗口不能无限大。\n   - **训练约束**：模型训练时见过的序列长度有限，超出训练长度后位置编码和注意力模式往往失效。\n   - **工程权衡**：窗口越大，每次调用越慢、越贵，所以模型厂商会设定一个固定上限。\n\n## 建议\n\n结合这两块，你可以自己串起来理解：**context 是\"这一轮喂了什么\"，context window 是\"这一轮最多能喂多少\"**。这也解释了那条笔记说的现象——信息存在应用里但没注入 context，模型就用不到，而窗口上限正是限制\"能注入多少\"的硬约束。\n\n如果你想确认笔记原文（比如 Understanding Context Windows 那篇里的具体表述），可以告诉我，我可以再用不同的关键词重新检索一次。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/5c1110e0d0945f1c8e5d01fbdcbf3d98",
+        "session_id": "93",
+        "turn_index": "1",
+        "resolved_query": "笔记里说的 context window 是什么？为什么会有这个上限？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/笔记方法对比.md",
+          "Reading notes/编程语言中的上下文.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 3412,
+          "output": 776
+        },
+        "duration_ms": 24386,
+        "message_count": 9,
+        "metrics": {
+          "k": 3,
+          "retrieved_chunks": [
+            "A01",
+            "OTHER:编程语言中的上下文",
+            "OTHER:笔记方法对比"
+          ],
+          "bench_chunks": [
+            "A01"
+          ],
+          "other_notes": [
+            "编程语言中的上下文",
+            "笔记方法对比"
+          ],
+          "recall": null,
+          "hnr": null,
+          "mrr": null,
+          "ndcg": null,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "Source: [[Reading notes/编程语言中的上下文.md#上下文无关文法|编程语言中的上下文 › 上下文无关文法]]\nIdentity: unknown\nEpistemic status: unverified\n## 上下文无关文法\n\n上下文无关文法（CFG）是形式语言理论中的概念：一条产生式规则无论被什么符号包围都适用，与\"上下文\"无关。编程语言的语法大多用 CFG 描述，例如表达式规则 `expr → expr + term`。\n---\nThe requested local passages were already supplied earlier in this run, or the shared local evidence character budget has been reached. Reuse the existing evidence.",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": null,
+        "citations": [
+          {
+            "path": "Reading notes/编程语言中的上下文.md",
+            "heading": "上下文无关文法",
+            "ok": true,
+            "reason": ""
+          },
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A01 Context 是什么",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true,
+        "action_current_ok": false,
+        "action_ideal_ok": true
+      },
+      {
+        "case_id": "R02",
+        "question": "如果对话聊得太长快装不下了，一般会怎么处理？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "先说明证据情况：这次检索返回的两段笔记（[[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]] 和 [[Reading notes/笔记方法对比.md#康奈尔笔记法|笔记方法对比 › 康奈尔笔记法]]）都不涉及这个问题。真正能用的是之前已检索到的这段笔记，以及你选中的那句话。下面我会分清\"笔记里说的\"和\"我的一般性解释\"。\n\n## 笔记里说的（事实）\n\n根据 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]：\n\n> 一次模型调用时，模型并不是直接读取应用的全部状态，而是由应用或 Agent Runtime 为这一轮调用构造一个输入上下文。\n\n> 某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n\n关键推论是：**\"对话历史装不下了\"不是一个模型问题，而是一个 context 构造问题**。每一轮调用前，应用都要决定往有限的上下文窗口里放什么。所以\"处理长对话\"本质上是\"如何在构造 context 时做取舍\"。\n\n## 一般性解释（超出笔记范围，供你参考）\n\n笔记本身没有列举具体策略，但常见的做法有这几类：\n\n1. **直接截断（truncation）**：丢掉最旧的对话，只保留最近若干轮。简单但会丢失早期信息。\n2. **摘要压缩（summarization）**：用模型把旧对话总结成一段摘要，替代原始历史。保留大意，但细节会丢。\n3. **滑动窗口 + 选择性注入**：保留系统指令和最近对话，同时按需把旧内容重新注入。\n4. **检索式注入（RAG 思路）**：旧对话存起来，每轮只检索与当前问题相关的片段注入。这正好呼应你选中的那句话——**\"检索质量比检索数量重要：一小段相关的内容胜过一大堆噪声\"**。也就是说，长对话的解法不是\"塞更多\"，而是\"选得更准\"。\n\n## 你可以这样形成自己的理解\n\n把这四件事放在一起看：\n\n- 模型的记忆 = 这一轮被构造进 context 的东西（笔记事实）\n- 对话变长 → context 装不下 → 必须取舍（直接推论）\n- 取舍的方式就是上面那些策略（一般知识，笔记未覆盖）\n- 你选中的那句话提醒你：取舍的核心标准是**相关性**，而不是数量\n\n需要说明的是：你之前的提问历史里提到过 Reading notes/Understanding Context Windows.md 这条笔记，但我这次检索没有拿到它的实际内容，所以无法引用它的原文。如果你想深入，可以直接翻那条笔记看看它对上下文窗口的具体说法。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/959974cdc81dab13370119a24f1abefa",
+        "session_id": "94",
+        "turn_index": "1",
+        "resolved_query": "如果对话聊得太长快装不下了，一般会怎么处理？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/编程语言中的上下文.md",
+          "Reading notes/笔记方法对比.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 2111,
+          "output": 793
+        },
+        "duration_ms": 24073,
+        "message_count": 7,
+        "metrics": {
+          "k": 3,
+          "retrieved_chunks": [
+            "A01",
+            "OTHER:编程语言中的上下文",
+            "OTHER:笔记方法对比"
+          ],
+          "bench_chunks": [
+            "A01"
+          ],
+          "other_notes": [
+            "编程语言中的上下文",
+            "笔记方法对比"
+          ],
+          "recall": null,
+          "hnr": null,
+          "mrr": null,
+          "ndcg": null,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "Source: [[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]]\nIdentity: unknown\nEpistemic status: unverified\n## 执行上下文\n\n运行时语境里，执行上下文指函数调用时保存局部变量和返回地址的环境，例如 JavaScript 的调用栈帧。每个栈帧就是一层执行上下文。\n\n---\n\nSource: [[Reading notes/笔记方法对比.md#康奈尔笔记法|笔记方法对比 › 康奈尔笔记法]]\nIdentity: unknown\nEpistemic status: unverified\n## 康奈尔笔记法\n\n康奈尔笔记法把一页纸分成三栏：右侧笔记栏记录主要内容，左侧线索栏写关键词和提问，底部摘要栏用自己的话总结整页。课后按\"5R\"流程使用：记录（Record）、简化（Reduce）、背诵（Recite）、反思（Reflect）、复习（Review）。适合课堂听讲和阅读系统性教材。",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": null,
+        "citations": [
+          {
+            "path": "Reading notes/编程语言中的上下文.md",
+            "heading": "执行上下文",
+            "ok": true,
+            "reason": ""
+          },
+          {
+            "path": "Reading notes/笔记方法对比.md",
+            "heading": "康奈尔笔记法",
+            "ok": true,
+            "reason": ""
+          },
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A01 Context 是什么",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true,
+        "action_current_ok": false,
+        "action_ideal_ok": true
+      },
+      {
+        "case_id": "R03",
+        "question": "agent 的 context 都是由哪几部分组成的？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "根据你选中的这段笔记（以及检索到的同篇笔记 A01），Agent 的 context 是在每次模型调用前由**应用或 Agent Runtime 临时构造**的输入，通常由以下几部分组成：\n\n1. **系统指令（System Instructions）**——定义模型的角色、行为边界等\n2. **应用指令（App Instructions）**——来自具体应用的规则和约束\n3. **用户消息（User Messages）**——当前用户的输入\n4. **历史对话（Conversation History）**——之前的对话记录（按策略筛选或截断）\n5. **工具定义（Tool Definitions）**——模型可以调用的工具列表及其说明\n6. **检索结果（Retrieval Results）**——从外部知识库或笔记中取回的相关内容\n7. **其他运行时信息**——比如时间、环境状态等\n\n来源：[[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]\n\n**需要注意的一个关键点**（这是笔记里强调的事实，而非推测）：\n\n> 模型当前看到的 context ≠ 系统拥有的全部信息。\n\n也就是说，某个信息即使确实存储在应用里（比如昨天的对话、某个数据库记录），只要这一轮调用时**没有被重新注入 context**，模型就无法直接使用它。这也是为什么笔记开头说\"检索质量比检索量更重要\"——context 是有限且每次重建的，塞入少量高相关的内容，比塞入大量噪声更有效。\n\n这也呼应了你之前的问题：context 确实是每次调用时重新构建的，构建过程就是从这些组成部分中做**选择和组装**。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/f7be1cae753ec6efccbd08a1c09c81af",
+        "session_id": "95",
+        "turn_index": "1",
+        "resolved_query": "agent 的 context 都是由哪几部分组成的？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 879,
+          "output": 369
+        },
+        "duration_ms": 13671,
+        "message_count": 5,
+        "metrics": {
+          "k": 1,
+          "retrieved_chunks": [
+            "A01"
+          ],
+          "bench_chunks": [
+            "A01"
+          ],
+          "other_notes": [],
+          "recall": null,
+          "hnr": null,
+          "mrr": null,
+          "ndcg": null,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": null,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A01 Context 是什么",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true,
+        "action_current_ok": false,
+        "action_ideal_ok": true
+      },
+      {
+        "case_id": "R04",
+        "question": "康奈尔笔记法具体怎么用？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "根据笔记 [[Reading notes/笔记方法对比.md#康奈尔笔记法|笔记方法对比 › 康奈尔笔记法]]，康奈尔笔记法分两部分使用：\n\n### 1. 先把页面分成三栏\n- **右侧笔记栏**：记录主要内容，比如老师讲授或教材中的要点。\n- **左侧线索栏**：写与右侧内容对应的**关键词和提问**，方便之后自测。\n- **底部摘要栏**：用**自己的话**总结整页内容。\n\n可以把它理解成：\n\n> 右边记内容，左边提炼线索，底部做整体总结。\n\n### 2. 课后按“5R”流程复习\n笔记中列出的五个步骤是：\n\n1. **记录（Record）**：先把主要内容记在右侧。\n2. **简化（Reduce）**：把右侧内容提炼成左侧的关键词或问题。\n3. **背诵（Recite）**：看着左侧的线索，尝试自己说出完整内容。\n4. **反思（Reflect）**：想一想这些知识之间有什么关系，哪里还不理解。\n5. **复习（Review）**：之后定期回顾，避免遗忘。\n\n### 我的解释：实际怎么用\n一个简单做法是：\n\n- **课上/阅读时**：只在右侧快速记录重点。\n- **课后整理时**：补左侧关键词和问题，例如“康奈尔笔记法的三栏是什么？”\n- **复习时**：遮住右侧，只看左侧问题，尝试口头回答。\n- **最后**：在底部用几句话写出本页核心意思。\n\n笔记里还提到，这种方法**适合课堂听讲和阅读系统性教材**。也就是说，它更适合结构清楚、内容连贯的学习材料；如果是零散灵感，未必是最合适的形式。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/22e78826346f472b378ba8f98dcb0634",
+        "session_id": "96",
+        "turn_index": "1",
+        "resolved_query": "康奈尔笔记法具体怎么用？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/笔记方法对比.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 850,
+          "output": 446
+        },
+        "duration_ms": 17024,
+        "message_count": 5,
+        "metrics": {
+          "k": 1,
+          "retrieved_chunks": [
+            "OTHER:笔记方法对比"
+          ],
+          "bench_chunks": [],
+          "other_notes": [
+            "笔记方法对比"
+          ],
+          "recall": null,
+          "hnr": null,
+          "mrr": null,
+          "ndcg": null,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": null,
+        "citations": [
+          {
+            "path": "Reading notes/笔记方法对比.md",
+            "heading": "康奈尔笔记法",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true,
+        "action_current_ok": false,
+        "action_ideal_ok": true
+      },
+      {
+        "case_id": "R05",
+        "question": "memory 和对话历史是一回事吗？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "**不是一回事。** 你的笔记 [[Reading notes/Agent Context Engineering 基准.md#A05 Memory|Agent Context Engineering 基准 › A05 Memory]] 里直接回答了这个问题，可以分成几点来看：\n\n**笔记里的事实**\n\n1. **定义不同**：\n   - Conversation history（对话历史）描述的是**当前交互过程中发生过什么**——也就是这一轮对话里说过的内容。\n   - Memory 关注的是**某些信息如何被保存下来，并在之后需要时重新提供给模型**。\n\n2. **两个不能互相推导**：\n   - 一条信息进入了 memory，**不代表**它会永久存在于每一轮 context（上下文窗口）中；\n   - 反过来，对话历史被压缩了，也**不能直接推出**这些内容就变成了 long-term memory。\n\n**帮你理解的方式（这是解释，不是笔记原文）**\n\n可以这样想：对话历史像一本\"流水账\"，记录这次对话从头到尾说了什么；而 memory 更像\"笔记系统\"——信息要被**挑出来、存起来、之后再取回来**，存储和检索是它自己的机制，跟流水账是两回事。\n\n- 对话历史可能很长，也可能被截断或压缩；\n- Memory 里的内容不一定每轮都出现在 context 里——系统可能只在相关时才检索注入（这也呼应了你选中的那句话：\"检索质量比检索数量更重要\"）。\n\n**一个推论（inference）**\n\n结合笔记的判断：两者的交集在于\"最终都可能被放进 context 给模型看\"，但**进入 context 的途径和持久性完全不同**——对话历史是当前会话的现场记录，memory 是经过保存/检索机制管理的信息。所以压缩对话历史 ≠ 形成记忆，保存进 memory ≠ 每轮都可见。\n\n另外注意，这条笔记的身份和认识状态标注为 unknown / unverified，建议把它当作阅读笔记的观点来参考，而不是权威定论。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/109dfe5afd982a39fcee1d171178d43e",
+        "session_id": "97",
+        "turn_index": "1",
+        "resolved_query": "memory 和对话历史是一回事吗？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/编程语言中的上下文.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 913,
+          "output": 434
+        },
+        "duration_ms": 12809,
+        "message_count": 5,
+        "metrics": {
+          "k": 2,
+          "retrieved_chunks": [
+            "A05",
+            "OTHER:编程语言中的上下文"
+          ],
+          "bench_chunks": [
+            "A05"
+          ],
+          "other_notes": [
+            "编程语言中的上下文"
+          ],
+          "recall": null,
+          "hnr": null,
+          "mrr": null,
+          "ndcg": null,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": null,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A05 Memory",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true,
+        "action_current_ok": false,
+        "action_ideal_ok": true
+      },
+      {
+        "case_id": "R06",
+        "question": "工具的定义和工具的结果，分别是什么时候给模型看的？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "我先说明证据范围：这次检索返回的是 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]] 这一段，没有找到《Understanding Context Windows》那篇笔记的具体内容。所以下面的回答分为「笔记原文支持的部分」和「我的解释/推断」。\n\n## 笔记里直接说的\n\n笔记指出（这是来源事实）：\n\n- 每次模型调用时，context 是由应用或 Agent Runtime **为这一轮调用专门构造的**，其中可能包含「系统指令、应用指令、用户消息、历史对话、**工具定义**、**检索结果**以及其他运行时信息」。\n- 模型看到的 context ≠ 系统拥有的全部信息；某条信息如果这一轮没被注入，模型就用不了。\n\n## 结合笔记的解释（这部分是我的推断，不是笔记原文）\n\n把上面的原理套到「工具定义」和「工具结果」上，时间点是不同的：\n\n**1. 工具定义（tool definition）——在模型做决策之前就要给。**\n模型要决定「这一轮要不要调用工具、调用哪个」，前提是它得知道有哪些工具、参数长什么样。所以工具定义通常在每一轮调用构造 context 时就已经注入，作为模型决策的依据。\n\n**2. 工具结果（tool result）——只能在执行之后、下一轮调用时才进入 context。**\n时间线是：\n- 第 N 轮：模型看着包含工具定义的 context，决定调用某个工具，并输出调用请求；\n- 应用/Runtime 在模型之外真正执行这个工具；\n- 第 N+1 轮：Runtime 把执行结果写进新构造的 context，模型这时才「看到」结果，再继续生成回答。\n\n这也符合笔记里的关键论断：模型本身不会自动获得任何信息，工具结果如果 Runtime 没有在下一轮重新注入 context，模型就永远不知道执行了什么。\n\n## 一个值得注意的边界\n\n如果你想确认的是更细节的问题（比如「模型决定调用工具的那一刻，是否已经能看到该工具上一次的结果」），目前检索到的笔记段落没有直接展开到这个粒度——按上面第 N 轮 / 第 N+1 轮的机制，答案应当是「看不到本轮要调用的工具的结果，但可以看到历史轮次中已注入的旧结果」。如果你希望，我可以再检索《Understanding Context Windows》这篇笔记，看它对 tool result 进入 context 的时序有没有更具体的描述。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/d10c8631034e58dfcd71df7e324c7265",
+        "session_id": "98",
+        "turn_index": "1",
+        "resolved_query": "工具的定义和工具的结果，分别是什么时候给模型看的？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/编程语言中的上下文.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 2157,
+          "output": 800
+        },
+        "duration_ms": 26528,
+        "message_count": 7,
+        "metrics": {
+          "k": 2,
+          "retrieved_chunks": [
+            "A01",
+            "OTHER:编程语言中的上下文"
+          ],
+          "bench_chunks": [
+            "A01"
+          ],
+          "other_notes": [
+            "编程语言中的上下文"
+          ],
+          "recall": null,
+          "hnr": null,
+          "mrr": null,
+          "ndcg": null,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "The requested local passages were already supplied earlier in this run, or the shared local evidence character budget has been reached. Reuse the existing evidence.",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": null,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A01 Context 是什么",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true,
+        "action_current_ok": false,
+        "action_ideal_ok": true
+      },
+      {
+        "case_id": "R07",
+        "question": "我选中的这段话说检索质量比数量重要，为什么？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "好问题。我先说说选中的这句话本身，再结合刚查到的笔记来解释。\n\n**选中的原文只是给出结论：**“检索质量比检索数量重要：一小段相关的内容胜过一大段嘈杂的内容。”但它没有展开解释原因。\n\n**笔记中的相关事实**（来自《Agent Context Engineering 基准 › A01 Context 是什么》）：\n\n- 模型每次调用时看到的不是系统的全部信息，而是由应用专门为这一轮\"构造\"的输入上下文（context）。\n- 检索结果只是被注入这个 context 的一部分内容。\n- 信息即使存在系统里，如果这一轮没有被注入 context，模型就用不到。\n\n**基于这些事实的解释（这部分是我帮你做的推理）：**\n\n1. **context 是有限的容器。** 每一轮的输入上下文容量有限（结合你之前问过的 context window 概念）。塞进去的东西越多，留给真正有用内容的空间就越少。\n\n2. **噪声会稀释有用信息。** 如果检索返回一大堆段落，其中只有几段和问题真正相关，其余都是\"噪声\"，模型就要在海量无关内容中自己找重点。无关内容多了，关键信息容易被淹没，模型甚至可能把注意力放错地方。\n\n3. **构造质量决定回答质量。** 既然模型只能用这一轮被注入的内容来回答，那么\"注入什么\"就比\"注入多少\"更关键——一小段精准命中的段落，能直接支撑回答；一大堆噪声段落反而增加干扰。\n\n**一句话总结：** 模型每轮只能消费构造好的有限 context，检索的价值在于把\"对的\"内容放进这个有限空间，而不是把\"多的\"内容塞进去。这就是\"质量 > 数量\"的底层原因。\n\n需要注意的是，笔记 A01 主要讲了\"context 是每轮构造的、模型看不到未注入的信息\"这一机制，并没有直接写下\"质量比数量重要\"这句话——后者是从这个机制推导出来的。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/0581129f9db94e8734765093709c423b",
+        "session_id": "99",
+        "turn_index": "1",
+        "resolved_query": "我选中的这段话说检索质量比数量重要，为什么？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/笔记方法对比.md",
+          "Reading notes/编程语言中的上下文.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 1779,
+          "output": 625
+        },
+        "duration_ms": 27512,
+        "message_count": 6,
+        "metrics": {
+          "k": 3,
+          "retrieved_chunks": [
+            "A01",
+            "OTHER:笔记方法对比",
+            "OTHER:编程语言中的上下文"
+          ],
+          "bench_chunks": [
+            "A01"
+          ],
+          "other_notes": [
+            "笔记方法对比",
+            "编程语言中的上下文"
+          ],
+          "recall": null,
+          "hnr": null,
+          "mrr": null,
+          "ndcg": null,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "Source: [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]\nIdentity: unknown\nEpistemic status: unverified\n## A01 Context 是什么\n\n一次模型调用时，模型并不是直接读取应用的全部状态，而是由应用或 Agent Runtime 为这一轮调用构造一个输入上下文。这个上下文可能包含系统指令、应用指令、用户消息、历史对话、工具定义、检索结果以及其他运行时信息。\n\n因此，模型当前看到的 context 不等于系统拥有的全部信息。某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n\n---\n\nSource: [[Reading notes/笔记方法对比.md#康奈尔笔记法|笔记方法对比 › 康奈尔笔记法]]\nIdentity: unknown\nEpistemic status: unverified\n## 康奈尔笔记法\n\n康奈尔笔记法把一页纸分成三栏：右侧笔记栏记录主要内容，左侧线索栏写关键词和提问，底部摘要栏用自己的话总结整页。课后按\"5R\"流程使用：记录（Record）、简化（Reduce）、背诵（Recite）、反思（Reflect）、复习（Review）。适合课堂听讲和阅读系统性教材。\n\n---\n\nSource: [[Reading notes/编程语言中的上下文.md#上下文无关文法|编程语言中的上下文 › 上下文无关文法]]\nIdentity: unknown\nEpistemic status: unverified\n## 上下文无关文法\n\n上下文无关文法（CFG）是形式语言理论中的概念：一条产生式规则无论被什么符号包围都适用，与\"上下文\"无关。编程语言的语法大多用 CFG 描述，例如表达式规则 `expr → expr + term`。",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": null,
+        "citations": [],
+        "citation_ok": true,
+        "action_current_ok": false,
+        "action_ideal_ok": false
+      },
+      {
+        "case_id": "R08",
+        "question": "那上下文无关文法对理解 agent 的 context 有帮助吗？",
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "这个问题问得好，因为它恰好触及了一个容易混淆的点：中文里这两个概念都叫\"上下文\"，但含义完全不同。这次没有新的检索，我基于已检索到的两篇笔记来回答。\n\n**源事实（来自笔记）：**\n\n- [[Reading notes/编程语言中的上下文.md#上下文无关文法|编程语言中的上下文 › 上下文无关文法]]：上下文无关文法（CFG）是形式语言理论的概念——一条产生式规则无论被什么符号包围都适用，与\"上下文\"无关。\n- [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]：agent 的 context 是为每一轮模型调用构造的输入，包含系统指令、用户消息、历史对话、工具定义等。\n\n**我的解释（区分两个概念）：**\n\n| | CFG 里的\"上下文\" | Agent 里的\"context\" |\n|---|---|---|\n| 含义 | 规则周围的符号环境 | 喂给模型的输入信息 |\n| \"无关\"指什么 | 规则应用不受环境影响 | —— |\n\n两者的\"上下文\"基本是同音异义词。CFG 讨论的是\"符号替换规则是否依赖周边符号\"，而 agent 的 context 讨论的是\"这一轮调用模型能看到哪些信息\"。\n\n**我的推断（是否有帮助）：**\n\n- **直接帮助很小**：理解 agent context 的关键在于笔记里说的第二点——模型看到的不等于系统拥有的，没注入的信息就用不了。这与 CFG 无关。\n- **有一点间接价值**：了解 CFG 能帮你避免望文生义，看到\"context\"这个词时先问一句\"是哪个语境下的上下文\"，这种概念辨析的习惯对学习是有益的。\n\n**结论**：你的笔记本身就把这两个概念分开记在不同文件里，这其实已经暗示了答案——它们是不同领域的概念。学 agent context engineering 时，重点应放在\"每轮调用如何构造输入\"上，而不是形式语言理论。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/58d0806eab8ae928ed125900953ea3c2",
+        "session_id": "100",
+        "turn_index": "1",
+        "resolved_query": "那上下文无关文法对理解 agent 的 context 有帮助吗？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/编程语言中的上下文.md",
+          "Reading notes/Agent Context Engineering 基准.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 971,
+          "output": 488
+        },
+        "duration_ms": 17362,
+        "message_count": 5,
+        "metrics": {
+          "k": 2,
+          "retrieved_chunks": [
+            "A01",
+            "OTHER:编程语言中的上下文"
+          ],
+          "bench_chunks": [
+            "A01"
+          ],
+          "other_notes": [
+            "编程语言中的上下文"
+          ],
+          "recall": null,
+          "hnr": null,
+          "mrr": null,
+          "ndcg": null,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": null,
+        "citations": [
+          {
+            "path": "Reading notes/编程语言中的上下文.md",
+            "heading": "上下文无关文法",
+            "ok": true,
+            "reason": ""
+          },
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A01 Context 是什么",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true,
+        "action_current_ok": false,
+        "action_ideal_ok": true
+      }
+    ],
+    "multi": [
+      {
+        "scenario_id": "M01",
+        "topic": "递进 + 误区",
+        "turns": [
+          {
+            "turn": 1,
+            "question": "帮我查找笔记：Agent 每次调用模型的时候，context 都是重新构建的吗？",
+            "submit": "submitted",
+            "msgCount": 2,
+            "wait": "answer-shown",
+            "answer": "找到了相关笔记，这次检索命中的是 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]。\n\n**笔记中的事实（source fact）：**\n\n> 一次模型调用时，模型并不是直接读取应用的全部状态，而是由应用或 Agent Runtime 为这一轮调用构造一个输入上下文。这个上下文可能包含系统指令、应用指令、用户消息、历史对话、工具定义、检索结果以及其他运行时信息。\n\n> 因此，模型当前看到的 context 不等于系统拥有的全部信息。某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n\n**对你问题的直接回答（yes）：** 是的。笔记明确说 context 是\"为**这一轮**调用构造\"的——也就是说每次模型调用都是一次独立的输入组装，而不是模型持续\"挂在\"某个状态上。\n\n**一个值得注意的推论（inference，不是笔记原文）：** 正因为每轮都重新构建，\"重新注入\"就成了关键动作。历史对话、工具结果等能进入下一轮 context，不是因为模型\"记得\"，而是因为应用把它们再次塞进了输入。这也能解释你之前问的\"tool result 什么时候进入 context\"——它是在结果产生后、下一轮调用构建 context 时被注入的。\n\n需要的话，我可以再检索一下笔记里有没有专门讲\"每轮构建时如何筛选/压缩内容\"的部分。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/0bcd79fcca9eb9503017e4da6429cf51",
+            "session_id": "101",
+            "turn_index": "1",
+            "resolved_query": "Agent 每次调用模型的时候，context 都是重新构建的吗？",
+            "relation": "NEW_TOPIC",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/间隔重复.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 962,
+              "output": 364
+            },
+            "duration_ms": 14814,
+            "message_count": 5,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:间隔重复"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "间隔重复"
+              ],
+              "recall": 0.5,
+              "hnr": null,
+              "mrr": 1,
+              "ndcg": 0.7871546029909718,
+              "precision": 0.5,
+              "noise_ratio": 0.5
+            },
+            "evidence": "",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:间隔重复"
+            ]
+          },
+          {
+            "turn": 2,
+            "question": "那聊久了以后呢？",
+            "submit": "submitted",
+            "msgCount": 4,
+            "wait": "answer-shown",
+            "answer": "这次我又检索了一遍笔记，但**没有找到**直接讨论\"对话变长后 context 怎么处理\"的条目（检索到的是间隔重复、执行上下文，跟你的问题无关，我就不引用了）。所以下面只能基于已经展示过的材料来推断，并明确标注哪些是有依据的、哪些是我的一般性解释。\n\n**有笔记依据的部分（来自已展示的 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|A01 Context 是什么]]）：**\n\n- context 每轮重新构建，且**可能**包含\"历史对话\"。\n- 关键在\"可能\"二字：哪些历史消息被注入、注入多少，是应用/Runtime 的决定，不是模型自动完成的。\n\n**由此可以推出的（inference）：**\n\n- 聊得久 = 历史对话变长 = 每轮重建 context 时需要决定\"塞多少进去\"的问题变得更尖锐。\n- 如果无脑全塞，context 会无限膨胀——但模型的输入长度（context window）是有限的，所以必然存在某种取舍：截断、摘要压缩、只取最近若干轮、或按需检索相关片段。\n\n**你选中的那句话在这里恰好呼应：** \"Retrieval quality matters more than retrieval volume: a small set of relevant passages beats a large noisy one.\" 虽然是讲检索的，但同样适用于历史对话——聊久了以后，好的做法不是把全部历史都堆进 context，而是挑选与当前问题相关的部分。\n\n**坦白说明边界：** 关于具体策略（滑动窗口、摘要、token 预算怎么分配），你的笔记目前似乎没有覆盖，以上只是我基于 A01 的原理做的推理。如果你想把这块补齐，这其实是\"Agent Context Engineering\"里一个很核心的主题，值得记一条新笔记。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/132d52eda4849c75b61cc83d0fc46d50",
+            "session_id": "101",
+            "turn_index": "2",
+            "resolved_query": "帮我查找笔记：Agent 对话变长（聊久了）之后，context 会发生什么变化？是否会超出上下文窗口、被截断或压缩，Agent 是如何处理长对话历史的？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/编程语言中的上下文.md",
+              "Reading notes/间隔重复.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 2993,
+              "output": 608
+            },
+            "duration_ms": 20131,
+            "message_count": 9,
+            "metrics": {
+              "k": 3,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:间隔重复",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "间隔重复",
+                "编程语言中的上下文"
+              ],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": 0,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "Source: [[Reading notes/间隔重复.md#核心原理|间隔重复 › 核心原理]]\nIdentity: personal_knowledge\nEpistemic status: confirmed_by_user\n## 核心原理\n\n记忆痕迹会随着时间消退，而且消退速度是先快后慢。间隔重复的原理就是在记忆即将消退的时间点附近安排复习，每次成功的提取都会让记忆痕迹维持更久。\n\n---\n\nSource: [[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]]\nIdentity: unknown\nEpistemic status: unverified\n## 执行上下文\n\n运行时语境里，执行上下文指函数调用时保存局部变量和返回地址的环境，例如 JavaScript 的调用栈帧。每个栈帧就是一层执行上下文。",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:间隔重复",
+              "OTHER:编程语言中的上下文"
+            ]
+          },
+          {
+            "turn": 3,
+            "question": "那这个和 memory 有什么区别？",
+            "submit": "submitted",
+            "msgCount": 6,
+            "wait": "answer-shown",
+            "answer": "我这一轮专门按\"memory / 记忆 / 持久化\"重新检索了笔记，**没有找到**直接讲 Agent memory 的条目（命中的是间隔重复、执行上下文，与 Agent 无关，不作引用）。所以下面以已展示过的 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|A01 Context 是什么]] 为唯一笔记依据，其余是帮你建立概念区分的解释，我会标清楚。\n\n**笔记依据（source fact）：**\n\n> 某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n\n这句话其实就是 context 与 memory 区别的核心——笔记里\"存储在应用中\"的那部分信息，扮演的正是 memory 的角色。\n\n**基于这句话的解释（explanation / inference，非笔记原文）：**\n\n- **Memory（记忆）**：持久存在的存储。它在模型调用之外，比如数据库、文件、应用状态。它的特点是\"一直在\"，但模型**看不见**它。\n- **Context（上下文）**：临时的、每轮重建的模型输入。它的特点是模型**看得见**，但调用一结束就没了。\n\n打个比方：memory 是你书架上的书，context 是你考试那天带进考场的纸条。书一直都在，但考试能用上的只有抄到纸条上的内容——这正是你选中的那句话说的：\"Retrieval quality matters more than retrieval volume\"，带进考场的纸条贵精不贵多。\n\n**两者的关系（inference）：**\n\nmemory 是\"存\"，context 是\"取\"。memory 里的信息对模型产生影响的唯一路径，就是在某一轮构建 context 时被**取出来、注入进去**。反过来，对话中产生的值得保留的信息，也需要被主动**写回** memory，否则这一轮调用结束后就从模型的世界里消失了。\n\n**边界说明：** 你的笔记目前没有专门讲 memory 的条目（比如 memory 的分类、读写时机等），以上区分是我从 A01 那句话推导出来的通用框架。如果你想，这可以是下一条值得记录的笔记。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/26e36a5dbcd1b07406f9c6caae95c33d",
+            "session_id": "101",
+            "turn_index": "3",
+            "resolved_query": "在 Agent Context Engineering 的语境下，context（每轮重新构建、注入模型的上下文）和 memory（记忆）有什么区别？笔记中是否有讨论 memory 的条目？",
+            "relation": "COMPARE",
+            "retrieved_paths": [
+              "Reading notes/编程语言中的上下文.md",
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/间隔重复.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 4153,
+              "output": 788
+            },
+            "duration_ms": 28220,
+            "message_count": 11,
+            "metrics": {
+              "k": 3,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:编程语言中的上下文",
+                "OTHER:间隔重复"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "编程语言中的上下文",
+                "间隔重复"
+              ],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": 0,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "Source: [[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]]\nIdentity: unknown\nEpistemic status: unverified\n## 执行上下文\n\n运行时语境里，执行上下文指函数调用时保存局部变量和返回地址的环境，例如 JavaScript 的调用栈帧。每个栈帧就是一层执行上下文。\n\n---\n\nSource: [[Reading notes/间隔重复.md#核心原理|间隔重复 › 核心原理]]\nIdentity: personal_knowledge\nEpistemic status: confirmed_by_user\n## 核心原理\n\n记忆痕迹会随着时间消退，而且消退速度是先快后慢。间隔重复的原理就是在记忆即将消退的时间点附近安排复习，每次成功的提取都会让记忆痕迹维持更久。",
+            "actual_action": "REPEAT_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:间隔重复",
+              "OTHER:编程语言中的上下文"
+            ]
+          },
+          {
+            "turn": 4,
+            "question": "所以本质上不都是为了记得更久吗？",
+            "submit": "submitted",
+            "msgCount": 8,
+            "wait": "answer-shown",
+            "answer": "这次检索依然没有命中讨论 memory 本质的新笔记（命中的是间隔重复和 Cookie/Token 会话，都不是讲 Agent 的，不引用）。所以下面仍然基于已展示的 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|A01 Context 是什么]] 来回答——这是本轮没有新证据、基于既有材料的分析。\n\n**你这个直觉抓住了一半，而且是重要的一半（这是 inference，不是笔记原文）：**\n\n是的，context 和 memory 确实服务于同一个上层目标——让模型在多轮交互中表现出\"连续性\"，不至于每轮都像第一次见面。从\"为了什么\"的角度看，你说得通。\n\n**但\"本质上都是为了记得更久\"这个说法会把一个关键区别抹掉：**\n\n- **Memory 管的是\"久\"**——时间维度。它解决\"信息能不能活过这一次调用\"。\n- **Context 管的根本不是\"久\"，而是\"看得见\"**——注意力维度。它解决\"这一次调用，模型能看到什么\"。\n\n注意一个反直觉的事实：context 恰恰是**最不能\"记得久\"的东西**——它每轮销毁重建，本身不存储任何东西。它不是一种记忆，而是一种**展示窗口**。真正\"记得久\"的只有 memory；context 只是 memory（和本轮新信息）的临时投影。\n\n**所以更准确的说法是：**\n\n两者不是同一件事的两种方式，而是一条流水线上的两个环节——\n\n> **memory 负责\"存得下、留得久\"，context 负责\"此刻取得出、看得见\"。**\n\n你选中的那句话正好补上了第三环：\"Retrieval quality matters more than retrieval volume\"——存得久还不够，每轮还要**取得准**，否则记忆再多，塞不进那个小窗口、或者塞进去一堆噪音，模型照样\"想不起来\"。\n\n**一个检验你是否理解的小问题（留给你自己回答）：** 如果一个 Agent 有完美的 memory（什么都能存），但检索/注入做得很差，它会表现得像\"记性好\"还是\"记性差\"？——按上面的框架，它实际上等于记性差，因为模型的世界里只有 context。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/e05e48f0f41f8b48f4e172396760757b",
+            "session_id": "101",
+            "turn_index": "4",
+            "resolved_query": "Agent 的 context 和 memory 本质上是不是都是为了记得更久、服务于同一个目的？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 1929,
+              "output": 548
+            },
+            "duration_ms": 17347,
+            "message_count": 10,
+            "metrics": {
+              "k": 0,
+              "retrieved_chunks": [],
+              "bench_chunks": [],
+              "other_notes": [],
+              "recall": null,
+              "hnr": null,
+              "mrr": null,
+              "ndcg": null,
+              "precision": null,
+              "noise_ratio": null
+            },
+            "evidence": "",
+            "actual_action": "REUSE_PREVIOUS",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:间隔重复",
+              "OTHER:编程语言中的上下文"
+            ]
+          }
+        ]
+      },
+      {
+        "scenario_id": "M03",
+        "topic": "强指代链",
+        "turns": [
+          {
+            "turn": 1,
+            "question": "帮我查找笔记：Tool definition 和 tool result 分别是什么时候给模型的？",
+            "submit": "submitted",
+            "msgCount": 2,
+            "wait": "answer-shown",
+            "answer": "你的笔记里有一条直接回答这个问题的内容，来自 [[Reading notes/Agent Context Engineering 基准.md#A06 Tool Definition 和 Tool Result|Agent Context Engineering 基准 › A06 Tool Definition 和 Tool Result]]：\n\n## 笔记原文要点\n\n**Tool definition：在模型做调用决策之前就要给出。**\n> 模型在决定是否调用某个工具之前，需要知道工具的名称、功能以及调用方式，因此 tool definition 通常需要在工具调用决策之前对模型可见。\n\n**Tool result：在工具真正执行之后，才被加入后续上下文。**\n> 工具尚未执行时，执行结果还不存在。只有工具真正运行后，结果才能被加入后续的模型上下文，用于下一步推理。\n\n笔记最后给了一句很精炼的总结：\n> definition 是决策依据，result 是执行产生的新证据。\n\n## 帮你梳理一下时间线\n\n结合笔记内容，一次工具调用的完整流程是：\n\n1. **调用前**：模型先看到 tool definition（名称、功能、参数格式），据此决定\"要不要调用、调用哪个、参数填什么\"。\n2. **执行中**：模型输出调用请求后，工具在模型之外运行，这一步模型是\"等待\"的。\n3. **执行后**：tool result 被拼进上下文，模型在下一轮推理时才能看到结果，并据此决定下一步（继续调用、还是直接回答）。\n\n## 和你选中的那句话的联系\n\n你当前选中的段落是\"检索质量比检索数量更重要\"。虽然它讲的是检索，但和这条笔记的精神一致：tool definition 和 tool result 进入上下文的**时机和必要性**是不同的——definition 是决策的前提必须提前给，result 则是执行后才产生、按需加入的新证据，两者都不属于\"相关内容就一股脑全给\"的情况。\n\n另外说明一下：这次检索还返回了一条关于\"上下文无关文法\"的笔记（[[Reading notes/编程语言中的上下文.md#上下文无关文法]]），它和你这个问题无关，我没有采用。\n\n需要的话，我可以帮你把这条 A06 笔记和你之前问的\"Agent 每次调用模型时 context 是否重新构建\"联系起来讨论——这两个问题其实是同一条流水线上的两个环节。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/6244f9ffde602b3d36659062973f293f",
+            "session_id": "102",
+            "turn_index": "1",
+            "resolved_query": "Tool definition 和 tool result 分别是什么时候给模型的？",
+            "relation": "NEW_TOPIC",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/编程语言中的上下文.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 988,
+              "output": 479
+            },
+            "duration_ms": 15701,
+            "message_count": 5,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A06",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A06"
+              ],
+              "other_notes": [
+                "编程语言中的上下文"
+              ],
+              "recall": 1,
+              "hnr": null,
+              "mrr": 1,
+              "ndcg": 1,
+              "precision": 0.5,
+              "noise_ratio": 0.5
+            },
+            "evidence": "",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A06 Tool Definition 和 Tool Result",
+                "ok": true,
+                "reason": ""
+              },
+              {
+                "path": "Reading notes/编程语言中的上下文.md",
+                "heading": "上下文无关文法",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A06",
+              "OTHER:编程语言中的上下文"
+            ]
+          },
+          {
+            "turn": 2,
+            "question": "那它是在什么时候产生的？",
+            "submit": "submitted",
+            "msgCount": 4,
+            "wait": "answer-shown",
+            "answer": "这个问题（\"它\"指 tool result）用刚才已经检索到的笔记就能回答，我这次没有再做新的查找。\n\n## 笔记里明确说的（source fact）\n\n来自 [[Reading notes/Agent Context Engineering 基准.md#A06 Tool Definition 和 Tool Result|Agent Context Engineering 基准 › A06 Tool Definition 和 Tool Result]]：\n\n> 工具尚未执行时，执行结果还不存在。只有工具真正运行后，结果才能被加入后续的模型上下文。\n\n也就是说：**tool result 产生于\"工具真正运行\"的那一刻**——在此之前它根本不存在，不是被藏起来没给模型看，而是还没有这个东西。\n\n## 由此可以推断的（inference，笔记没有逐字写）\n\n把流程拆开看，产生的具体时点是：\n\n1. 模型输出一个\"调用请求\"（比如要搜索某个关键词）——注意，**这一步模型只产生了调用意图，并没有产生结果**。结果不是模型自己生成的。\n2. 控制权交给模型外部的执行环境，工具在那里真正跑起来（查数据库、调 API、执行代码……）。\n3. 工具跑完、返回输出的那个瞬间，tool result 才**产生**。\n4. 这个结果随后被拼进上下文，模型在**下一轮**推理时才看到它。\n\n所以严格说，tool result 是在**两次模型推理之间、模型之外**产生的。这也呼应了笔记里那句\"result 是执行产生的新证据\"——它是外部世界给出的新信息，而不是模型推理的直接产物。\n\n## 一个值得注意的分界线\n\n可以用\"谁产出了什么\"来记这条笔记：\n\n| 内容 | 谁产生的 | 什么时候 |\n|---|---|---|\n| tool definition | 开发者/系统预先写好 | 模型做调用决策**之前**就在上下文里 |\n| 调用请求 | 模型生成 | 决策时 |\n| tool result | 工具执行产生 | 工具运行**完成后**，进入下一轮上下文 |\n\n笔记本身只覆盖到这里为止。如果你想追问\"result 具体是怎么被拼进上下文的、以什么格式\"，这一步笔记里没有写，我可以再帮你检索看看其他笔记有没有涉及。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/d25c4ee698d6b1b9cd58d0eb47fd945f",
+            "session_id": "102",
+            "turn_index": "2",
+            "resolved_query": "笔记《Agent Context Engineering 基准》中关于 A06 Tool Definition 和 Tool Result 的这条笔记是在什么时候创建（产生）的？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/笔记方法对比.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 1502,
+              "output": 634
+            },
+            "duration_ms": 16383,
+            "message_count": 7,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A06",
+                "OTHER:笔记方法对比"
+              ],
+              "bench_chunks": [
+                "A06"
+              ],
+              "other_notes": [
+                "笔记方法对比"
+              ],
+              "recall": null,
+              "hnr": null,
+              "mrr": null,
+              "ndcg": null,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A06 Tool Definition 和 Tool Result",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A06",
+              "OTHER:编程语言中的上下文",
+              "OTHER:笔记方法对比"
+            ]
+          },
+          {
+            "turn": 3,
+            "question": "如果模型还没执行就已经看到它，会发生什么？",
+            "submit": "submitted",
+            "msgCount": 6,
+            "wait": "answer-shown",
+            "answer": "这个\"如果\"很有意思，因为它其实触及了一个逻辑上的矛盾。我基于已检索到的笔记来推理，没有做新的查找，下面会把哪些是笔记说的、哪些是我的推断标清楚。\n\n## 先看笔记设定的前提（source fact）\n\n[[Reading notes/Agent Context Engineering 基准.md#A06 Tool Definition 和 Tool Result|笔记 A06]] 说得很明确：\n\n> 工具尚未执行时，执行结果**还不存在**。\n\n注意措辞：不是\"存在但没给模型看\"，而是**不存在**。所以\"模型在执行前就看到真实结果\"在正常情况下是不可能发生的——没有东西可看。\n\n## 那么\"看到它\"意味着什么？（inference）\n\n如果执行前上下文里真的出现了一段\"tool result\"，那它只可能是以下几种东西之一：\n\n1. **伪造/猜测的结果**：由人、系统、或模型自己编造的内容，伪装成工具输出。\n2. **过期的旧结果**：上一次执行留下的结果被错误地当成了本次的。\n3. **模板或占位符**：一个\"预期结果\"的样例，被误当成真实结果。\n\n无论哪种，共同点都是：**模型把它当成了真证据，但它并不是这次执行产生的。**\n\n## 会发生什么？（inference）\n\n回到笔记那句总结——\"definition 是决策依据，result 是执行产生的**新证据**\"。result 在整个循环里的角色是\"来自外部世界的、可信的新信息\"。如果这个角色被假数据占据，可以推断出几个后果：\n\n- **证据链断裂**：模型的下一步推理建立在未经执行验证的内容上，结论可能错，但错得很\"自信\"——因为它以为自己拿到了真实工具返回。\n- **决策被架空**：既然\"结果\"已经在手里，模型可能跳过真正该做的调用，直接基于假结果回答。工具调用循环形同虚设。\n- **错误被放大**：假结果进入上下文后，会被后续每一轮推理反复引用，越往后越难发现和纠正——这正是笔记标题\"Context Engineering\"关心的问题：上下文里放了什么，直接决定模型怎么思考。\n\n## 一句话总结（我的归纳，非笔记原文）\n\ntool definition 提前给是**必须**的，因为它是决策依据；tool result 提前给则是**有害**的，因为那时它只能是假的，而假证据比没证据更危险。\n\n不过要说明：笔记本身只讲了\"何时可见、为什么\"，并没有讨论\"伪造结果\"这种异常场景，上面第二、三节的推演是我基于笔记逻辑做出的。如果你的其他笔记里有专门讨论幻觉或上下文污染的条目，我可以再检索确认，你要我去查一下吗？",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/1e0826b6f84dba6ee056c43c6ee62c99",
+            "session_id": "102",
+            "turn_index": "3",
+            "resolved_query": "如果在工具还没执行之前，模型就已经在上下文里看到了该工具的 tool result（工具执行结果），会发生什么？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 1792,
+              "output": 828
+            },
+            "duration_ms": 25865,
+            "message_count": 8,
+            "metrics": {
+              "k": 0,
+              "retrieved_chunks": [],
+              "bench_chunks": [],
+              "other_notes": [],
+              "recall": null,
+              "hnr": null,
+              "mrr": null,
+              "ndcg": null,
+              "precision": null,
+              "noise_ratio": null
+            },
+            "evidence": "",
+            "actual_action": "REUSE_PREVIOUS",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A06 Tool Definition 和 Tool Result",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A06",
+              "OTHER:编程语言中的上下文",
+              "OTHER:笔记方法对比"
+            ]
+          }
+        ]
+      },
+      {
+        "scenario_id": "M04",
+        "topic": "分支后返回",
+        "turns": [
+          {
+            "turn": 1,
+            "question": "帮我查找笔记：Context 和 Memory 最大的区别是什么？",
+            "submit": "submitted",
+            "msgCount": 2,
+            "wait": "answer-shown",
+            "answer": "检索完成。直接回答：**你的笔记里目前没有找到一段明确标题为 \"Context vs Memory\" 的对比文字**，检索只返回了两条相关内容，下面我基于这些真实来源来回答，并清楚区分\"笔记原文\"和\"我的推断\"。\n\n## 笔记中实际有的内容\n\n**来源事实**（来自 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]）：\n\n> 一次模型调用时，模型并不是直接读取应用的全部状态，而是由应用或 Agent Runtime 为这一轮调用构造一个输入上下文……某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n\n这条笔记虽然没有直接出现 \"Memory\" 这个词，但它点出了关键机制：**存储在应用中的信息 ≠ 模型当前能看到的信息**。\n\n另一条检索结果 [[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]] 讲的是编程语言里的\"执行上下文\"（函数调用栈帧），和你要问的 Agent 语境下的 Memory 不是一回事，可以作为类比但别混淆。\n\n## 基于笔记的推断（这是我的解释，不是笔记原文）\n\n结合上面那条笔记，Context 和 Memory 最大的区别可以概括为：\n\n| | Context | Memory |\n|---|---|---|\n| 本质 | 每轮调用时**临时构建**的模型输入 | 系统中**持久存储**的信息 |\n| 谁拥有 | Agent Runtime 每轮组装，用完即弃 | 应用/系统长期持有 |\n| 模型可见性 | 模型这一轮**直接看到** | 模型**看不到**，除非被注入进 context |\n\n换句话说，最大的区别是：**Memory 是\"存着的东西\"，Context 是\"这一轮给模型看的东西\"**。Memory 里的信息只有通过检索、组装、注入到 context 里，模型才能用上——这正是笔记里说的\"存储在应用中 ≠ 模型能直接使用\"。\n\n## 建议\n\n如果你之前读过专门讲 Memory 机制的笔记（比如为什么存了信息模型这一轮却不知道），它可能在别的笔记文件里，但本次检索没有返回。如果你记得大概的笔记名或关键词，我可以再帮你查一次。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/01fd3c0e01886ce185caa3e88e7d8fbe",
+            "session_id": "103",
+            "turn_index": "1",
+            "resolved_query": "Context 和 Memory 最大的区别是什么？",
+            "relation": "NEW_TOPIC",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/编程语言中的上下文.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 2275,
+              "output": 784
+            },
+            "duration_ms": 20871,
+            "message_count": 7,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "编程语言中的上下文"
+              ],
+              "recall": 0.5,
+              "hnr": null,
+              "mrr": 1,
+              "ndcg": 0.3373519727104165,
+              "precision": 0.5,
+              "noise_ratio": 0.5
+            },
+            "evidence": "Source: [[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]]\nIdentity: unknown\nEpistemic status: unverified\n## 执行上下文\n\n运行时语境里，执行上下文指函数调用时保存局部变量和返回地址的环境，例如 JavaScript 的调用栈帧。每个栈帧就是一层执行上下文。",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              },
+              {
+                "path": "Reading notes/编程语言中的上下文.md",
+                "heading": "执行上下文",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:编程语言中的上下文"
+            ]
+          },
+          {
+            "turn": 2,
+            "question": "那 Memory 是不是一定跨 session？",
+            "submit": "submitted",
+            "msgCount": 4,
+            "wait": "answer-shown",
+            "answer": "## 检索结果说明\n\n我刚检索了\"session、持久化、短期/长期记忆\"等关键词，**你的笔记里没有直接讨论 Memory 是否跨 session 的段落**（返回的两条都是记笔记方法的笔记，与本问题无关）。所以下面的回答是：基于上一轮已检索到的笔记原文 + 我的推断，我会明确区分两者。\n\n## 直接回答：不一定\n\n**来源事实**（仍是 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]，本轮没有新证据）：\n\n> 一项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n\n这条笔记只告诉我们 Memory 的定义性特征是\"**存在系统里、需要时才注入 context**\"，它并没有说\"必须跨 session 存活\"。\n\n**我的推断**（不是笔记原文）：\n\nMemory 和 Context 的区别在于\"**谁持有、是否持久于单次调用**\"，而不在于\"**存活多久**\"。按这个逻辑：\n\n- **Context 是每轮调用临时构建的**——这是确定的，笔记明确说了\"为这一轮调用构造\"。\n- **Memory 的生命周期是系统设计的选择**：可以是\n  - **会话内记忆**（session-scoped）：只在这一个对话里有效，session 结束就丢弃——它仍然是 memory（因为存在系统侧、需要注入），但**不跨 session**；\n  - **长期记忆**（long-term / cross-session）：写入持久存储（数据库、文件），新 session 里可以被检索回来。\n\n所以准确的表述是：**Memory ≠ 一定跨 session；\"跨 session\" 只是 memory 的一种实现方式（长期记忆），不是 memory 的定义**。判断某个东西是不是 memory，关键看它是不是\"系统持有、按需注入 context\"，而不是看它活得够不够久。\n\n## 帮你检验理解的一个问题\n\n你可以这样想：一个 Agent 在同一个 session 内，把用户三分钟前说的偏好存进了一个变量，之后的轮次再把它注入 context——你觉得这算 memory 吗？按照上面的定义，**算**（系统持有 + 需要注入），即使它从没离开过这个 session。\n\n如果你的笔记里其实有关于 short-term / long-term memory 划分的段落（可能用了别的关键词，比如\"持久化存储\"或具体产品名），告诉我关键词，我可以再查一次。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/1c19bf31e1772d8583fe608e065f8c2b",
+            "session_id": "103",
+            "turn_index": "2",
+            "resolved_query": "在我的笔记中，Agent 的 Memory 是否一定要跨 session（跨会话）持久存在？Memory 与 Context 的区别是否在于跨 session 的持久性？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/笔记方法对比.md",
+              "Reading notes/间隔重复.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 3437,
+              "output": 725
+            },
+            "duration_ms": 24044,
+            "message_count": 9,
+            "metrics": {
+              "k": 3,
+              "retrieved_chunks": [
+                "A05",
+                "OTHER:间隔重复",
+                "OTHER:笔记方法对比"
+              ],
+              "bench_chunks": [
+                "A05"
+              ],
+              "other_notes": [
+                "间隔重复",
+                "笔记方法对比"
+              ],
+              "recall": 1,
+              "hnr": null,
+              "mrr": 1,
+              "ndcg": 1,
+              "precision": 0.3333333333333333,
+              "noise_ratio": 0.6666666666666666
+            },
+            "evidence": "Source: [[Reading notes/间隔重复.md#核心原理|间隔重复 › 核心原理]]\nIdentity: personal_knowledge\nEpistemic status: confirmed_by_user\n## 核心原理\n\n记忆痕迹会随着时间消退，而且消退速度是先快后慢。间隔重复的原理就是在记忆即将消退的时间点附近安排复习，每次成功的提取都会让记忆痕迹维持更久。\n\n---\n\nSource: [[Reading notes/笔记方法对比.md#卡片盒笔记法|笔记方法对比 › 卡片盒笔记法]]\nIdentity: unknown\nEpistemic status: unverified\n## 卡片盒笔记法\n\n卡片盒笔记法（Zettelkasten）要求每张卡片只写一个想法，用自己的话改写，并大量链接到其他卡片。它强调日积月累的网状生长，适合长期研究和写作选题，缺点是上手门槛高、见效慢。",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:编程语言中的上下文",
+              "A05",
+              "OTHER:间隔重复",
+              "OTHER:笔记方法对比"
+            ]
+          },
+          {
+            "turn": 3,
+            "question": "有哪些东西值得写进 Memory？",
+            "submit": "submitted",
+            "msgCount": 6,
+            "wait": "answer-shown",
+            "answer": "## 检索结果说明\n\n我检索了\"哪些信息值得写入 Memory、长期记忆的内容类型、记忆策略\"等关键词，**你的笔记里没有直接列出\"该往 Memory 里写什么\"的清单**（返回的是康奈尔笔记法、A2 第一性原理、HTML 标签等无关段落）。所以下面：来源事实仍只有之前那条 A01，其余是我的推断，会标明。\n\n## 从笔记能推出的原则\n\n**来源事实**（[[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]）：\n\n> 某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n\n这条笔记给出一个隐含的判断标准：Memory 里所有东西都会**争夺注入 context 的机会**（你选中的那段话说的也是这个——相关的小集合胜过嘈杂的大集合）。所以值得写入的，是那些\"**未来大概率需要被注入**\"的信息。\n\n## 值得写入 vs 不值得写入（我的推断）\n\n基于上面的原则，可以这样分：\n\n**通常值得写入的：**\n- **稳定、长期有效的用户偏好**：如\"用户用中文交流\"\"偏好简洁回答\"——跨很多轮、很多 session 都相关；\n- **不易重新获得的事实**：用户主动告诉你的个人情况、项目背景——一旦丢了就再也问不出来或很难再推出；\n- **重要的决策和结论**：\"我们决定用方案 B 因为……\"——后续对话需要保持一致性；\n- **反复使用的上下文**：项目的技术栈、代码规范等，每次都重新说一遍成本很高。\n\n**通常不值得写入的：**\n- **一次性、用完即弃的信息**：\"现在几点\"\"刚才那个报错的临时变量名\"；\n- **可以从别处推导或检索到的信息**：能靠检索文档拿到的，写进 memory 是重复存储，还可能过期；\n- **易变的状态**：\"用户正在调试第 3 个函数\"——明天就失效，写进去只会变成噪音；\n- **原始冗长内容**：整段对话原文塞进去，违反了你选中那段话的原则——注入时变成大噪音集合。\n\n## 一个简单的判断口诀（我的总结）\n\n写之前问三个问题：\n1. **未来还会用到吗？**（一次性 → 不写）\n2. **不存的话还能恢复吗？**（能重新查到 → 不写）\n3. **它会稳定多久？**（很快过期 → 不写或标注时效）\n\n三个都偏向\"长期、不可恢复、稳定\"，才值得占用 memory 的空间。\n\n注意：以上分类是我基于 A01 那条笔记的机制推导出来的通用经验，**你的笔记里目前没有专门的\"记忆写入策略\"段落**。如果你读过相关材料（比如 MemGPT、记忆分类的笔记），告诉我关键词我可以再查一次。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/63548e4fb2ee26725121644ed19edd79",
+            "session_id": "103",
+            "turn_index": "3",
+            "resolved_query": "在 Agent Context Engineering 的语境下，哪些类型的信息或内容值得写进 Memory（长期记忆系统），判断标准是什么？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/笔记方法对比.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 2199,
+              "output": 689
+            },
+            "duration_ms": 21432,
+            "message_count": 9,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:笔记方法对比"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "笔记方法对比"
+              ],
+              "recall": null,
+              "hnr": null,
+              "mrr": null,
+              "ndcg": null,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "",
+            "actual_action": "REPEAT_RETRIEVAL",
+            "action_ok": null,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:编程语言中的上下文",
+              "A05",
+              "OTHER:间隔重复",
+              "OTHER:笔记方法对比"
+            ]
+          },
+          {
+            "turn": 4,
+            "question": "回到刚才的 Context，所以每次调用都会重新构造？",
+            "submit": "submitted",
+            "msgCount": 8,
+            "wait": "answer-shown",
+            "answer": "## 直接回答：是的\n\n这条在笔记里有明确原文支持。**来源事实**（[[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]，本次检索再次返回，与之前一致）：\n\n> 一次模型调用时，模型并不是直接读取应用的全部状态，而是由应用或 Agent Runtime **为这一轮调用构造一个输入上下文**。因此，某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n\n拆开看就是三个要点（前两条是笔记原文，第三条是直接推论）：\n\n1. **每次调用都是一次新的构造**：\"为这一轮调用构造\"——context 不是一直在那里的东西，而是每轮调用前由 Runtime 现拼出来的；\n2. **模型不直接读取应用状态**：它只能看到这一轮被塞进来的输入；\n3. **推论**：所以模型两次调用之间没有\"自带的连续性\"——上一轮看到了什么，不会自动带到下一轮，除非 Runtime 再次注入。\n\n## 这意味着什么（解释与推断）\n\n- **\"对话有记忆\"其实是 Runtime 的功劳**：你感觉 ChatGPT 记得你前面说的话，是因为每轮调用时，之前的对话历史被**重新组装**进了新的 context——不是模型自己记得。\n- **这也解释了你选中的那段话为什么重要**：既然每轮都要重新构造，构造时\"放什么进去\"就成了核心问题——空间是有限的，所以\"小而相关的集合胜过大的噪音集合\"。\n- 可以把整个循环想成：**每轮调用 = 从应用状态（含 memory、对话历史）中选材 → 组装成 context → 喂给模型 → 模型输出 → 状态更新**，然后下一轮从头再来。\n\n到这里，整条线就闭环了：Memory 是系统持有的\"仓库\"（不一定跨 session），Context 是每次调用临时搭建的\"工作台\"，而注入策略决定仓库里的哪些东西会被摆上工作台。\n\n如果你接下来想问\"每轮重新构造时，到底按什么顺序、什么优先级选材\"——这通常是笔记里讲的 context 组装策略，需要的话告诉我，我可以检索看看有没有相关内容。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/596c80345cb3eec00c49573c829bb166",
+            "session_id": "103",
+            "turn_index": "4",
+            "resolved_query": "回到之前关于 Context 的讨论：根据笔记 A01（Context 是什么），是否每次调用 LLM 时都需要把 Context 重新构造并注入一次？请解释每次调用重新构造 Context 的机制。",
+            "relation": "RETURN",
+            "retrieved_paths": [],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 2594,
+              "output": 541
+            },
+            "duration_ms": 17904,
+            "message_count": 10,
+            "metrics": {
+              "k": 0,
+              "retrieved_chunks": [],
+              "bench_chunks": [],
+              "other_notes": [],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": null,
+              "precision": null,
+              "noise_ratio": null
+            },
+            "evidence": "",
+            "actual_action": "REUSE_PREVIOUS",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:编程语言中的上下文",
+              "A05",
+              "OTHER:间隔重复",
+              "OTHER:笔记方法对比"
+            ]
+          }
+        ]
+      },
+      {
+        "scenario_id": "M06",
+        "topic": "用户纠正",
+        "turns": [
+          {
+            "turn": 1,
+            "question": "帮我查找笔记：Tool result 是什么时候进入 context 的？",
+            "submit": "submitted",
+            "msgCount": 2,
+            "wait": "answer-shown",
+            "answer": "根据这次检索到的笔记，**没有一条笔记直接说明 tool result 进入 context 的具体时机**。检索只返回了「执行上下文」这样不相关的内容，所以下面我只能结合已有的笔记事实做推断，请你注意区分：\n\n**笔记中明确说到的（事实）**\n来自 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]：\n\n> 一次模型调用时，模型并不是直接读取应用的全部状态，而是由应用或 Agent Runtime 为这一轮调用构造一个输入上下文。这个上下文可能包含系统指令、应用指令、用户消息、历史对话、工具定义、检索结果以及其他运行时信息。\n> 某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n\n**基于这个事实的推断（不是笔记原文）**\n1. 模型在一次调用中输出 tool call 后，**工具是由应用/Agent Runtime 执行的，模型自己看不到执行结果**——因为模型只读 context，不读应用状态。\n2. 既然\"没有被重新注入 context 的信息模型无法使用\"，那么 tool result 只能是在**下一次模型调用**时，由 Runtime 把它作为一条消息（通常 role 为 tool）注入新构建的 context 中，模型才能\"看到\"结果。\n3. 换句话说：tool result 不是自动进入 context 的，它和 system prompt、历史消息一样，是**每一轮调用前由 Runtime 重新组装进去的**。\n\n如果你之前的笔记（比如《Understanding Context Windows》）里有关于 tool result 时序的记录，这次检索没有命中，你可以告诉我笔记名，我可以再针对性地查一次。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/f87b7be04cb3e52297c209b94e3ca80a",
+            "session_id": "104",
+            "turn_index": "1",
+            "resolved_query": "Tool result 是什么时候进入 context 的？",
+            "relation": "NEW_TOPIC",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/编程语言中的上下文.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 2177,
+              "output": 563
+            },
+            "duration_ms": 17202,
+            "message_count": 7,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "编程语言中的上下文"
+              ],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": 0,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "Source: [[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]]\nIdentity: unknown\nEpistemic status: unverified\n## 执行上下文\n\n运行时语境里，执行上下文指函数调用时保存局部变量和返回地址的环境，例如 JavaScript 的调用栈帧。每个栈帧就是一层执行上下文。",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:编程语言中的上下文"
+            ]
+          },
+          {
+            "turn": 2,
+            "question": "不对，我问的是 tool definition。",
+            "submit": "submitted",
+            "msgCount": 4,
+            "wait": "answer-shown",
+            "answer": "这次检索只命中了「编程语言中的上下文」这种无关笔记，**笔记里没有专门讲 tool definition 注入时机的条目**。所以以下内容请区分来源：\n\n**笔记中明确说到的（事实）**\n来自本轮已检索到的 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]：\n\n> 这个上下文可能包含系统指令、应用指令、用户消息、历史对话、**工具定义**、检索结果以及其他运行时信息。\n\n也就是说，笔记只确认了：tool definition 是 Runtime 为每轮调用构造的 context 的组成部分之一。\n\n**基于这个事实的推断（不是笔记原文）**\n1. 既然 context 是\"每一次模型调用前由 Runtime 构造\"的，tool definition 作为其组成部分，**也应是在调用发起时就注入的**——模型必须在生成 tool call 之前就知道有哪些工具可用、参数是什么。\n2. 这和 tool result 的时机不同：tool definition 在**调用开始时**就给出，tool result 是在**工具执行完、下一轮调用时**才进入 context。\n3. 笔记还强调\"没被重新注入的信息模型无法使用\"，由此可推断：如果某轮调用 Runtime 没有注入某工具的定义，模型那一轮就无法调用它——工具集是可以按轮变化的。\n\n**局限说明**：以上第 1、2 点是我从笔记事实推出来的，笔记本身没有直接写\"tool definition 在每轮调用前注入\"。如果你的笔记里有更明确的出处（比如之前提到的《Understanding Context Windows》），这次没有检索命中，你可以提供笔记名，我再针对性查一次。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/cb1f12e73feaa995ba1d974dfd719488",
+            "session_id": "104",
+            "turn_index": "2",
+            "resolved_query": "帮我查找笔记：Tool definition（工具定义）是什么时候进入 context 的？",
+            "relation": "REFINE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/笔记方法对比.md",
+              "Reading notes/编程语言中的上下文.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 3089,
+              "output": 543
+            },
+            "duration_ms": 18775,
+            "message_count": 9,
+            "metrics": {
+              "k": 3,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:编程语言中的上下文",
+                "OTHER:笔记方法对比"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "编程语言中的上下文",
+                "笔记方法对比"
+              ],
+              "recall": null,
+              "hnr": null,
+              "mrr": null,
+              "ndcg": null,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "Source: [[Reading notes/编程语言中的上下文.md#上下文无关文法|编程语言中的上下文 › 上下文无关文法]]\nIdentity: unknown\nEpistemic status: unverified\n## 上下文无关文法\n\n上下文无关文法（CFG）是形式语言理论中的概念：一条产生式规则无论被什么符号包围都适用，与\"上下文\"无关。编程语言的语法大多用 CFG 描述，例如表达式规则 `expr → expr + term`。",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:编程语言中的上下文",
+              "OTHER:笔记方法对比"
+            ]
+          },
+          {
+            "turn": 3,
+            "question": "那为什么它必须比执行结果更早出现？",
+            "submit": "submitted",
+            "msgCount": 6,
+            "wait": "answer-shown",
+            "answer": "这次检索命中的还是同一条 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]，它确认了 **tool definition 和 tool result 一样都是\"由 Runtime 为每轮调用构造的 context 的组成部分\"**，但笔记里没有直接解释\"为什么 definition 必须先于 result 出现\"。所以下面的推理请你当作**基于笔记事实的推断**来读：\n\n**为什么 tool definition 必须更早出现（推断）**\n\n1. **因果顺序决定的**：模型要输出一个 tool call，前提是它\"知道\"有哪些工具、每个工具叫什么、接受什么参数。这些信息只能来自 tool definition。如果 definition 不在 context 里，模型要么不知道工具存在，要么只能瞎猜参数格式。\n\n2. **笔记里的原则反过来用**：笔记说\"某项信息如果没有被重新注入 context，模型仍然无法直接使用\"。反过来说，凡是模型在某轮**需要使用**的信息，就必须在**那一轮调用开始前**注入。模型在第一轮就要决定是否调工具，所以 definition 必须在第一轮就出现；而 result 是工具**执行之后**才产生的，第一轮调用时它还不存在，自然不可能更早注入。\n\n3. **生产者和时机不同**：definition 是开发者/Runtime **预先写好**的，随时可用；result 是**运行过程中产生**的新信息。一个只能\"预先就位\"，一个只能\"事后补入\"，这个时间差是工具调用机制本身造成的。\n\n**一句话总结（我的理解）**：definition 是模型做决策的**输入前提**，result 是决策执行后的**反馈**——前提必须先给，反馈只能后到。\n\n**局限**：这套解释是我从笔记的 context 构造原则推出来的，笔记本身没有专门写\"definition 先于 result\"这一条。如果你想要笔记里的直接出处，目前检索范围内没有。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/c53b5b6678efd62ae857d764635b4b31",
+            "session_id": "104",
+            "turn_index": "3",
+            "resolved_query": "为什么 tool definition（工具定义）必须在 Agent 的上下文中比工具的执行结果更早出现？即工具定义注入时机为什么先于执行结果？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/编程语言中的上下文.md",
+              "Reading notes/Agent Context Engineering 基准.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 1862,
+              "output": 460
+            },
+            "duration_ms": 14204,
+            "message_count": 9,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A06",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A06"
+              ],
+              "other_notes": [
+                "编程语言中的上下文"
+              ],
+              "recall": 1,
+              "hnr": null,
+              "mrr": 1,
+              "ndcg": 1,
+              "precision": 0.5,
+              "noise_ratio": 0.5
+            },
+            "evidence": "",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:编程语言中的上下文",
+              "OTHER:笔记方法对比",
+              "A06"
+            ]
+          }
+        ]
+      },
+      {
+        "scenario_id": "M05",
+        "topic": "注入错误 assistant 历史",
+        "turns": [
+          {
+            "turn": 1,
+            "question": "那既然 Developer 的优先级更高，它是不是一定比普通用户输入更优先？",
+            "seed": {
+              "count": 2,
+              "seeded": [
+                {
+                  "role": "user",
+                  "len": 29
+                },
+                {
+                  "role": "assistant",
+                  "len": 32
+                }
+              ]
+            },
+            "submit": "submitted",
+            "msgCount": 2,
+            "wait": "timeout",
+            "answer": "",
+            "error": "timeout"
+          }
+        ]
+      },
+      {
+        "scenario_id": "M07",
+        "topic": "框架漂移后重建",
+        "turns": [
+          {
+            "turn": 1,
+            "question": "帮我查找笔记：Agent 的 Context 是怎么构建的？",
+            "submit": "submitted",
+            "msgCount": 2,
+            "wait": "answer-shown",
+            "answer": "根据你的笔记 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]，相关要点如下：\n\n## 笔记中的事实\n\n1. **Context 不是模型直接读取应用状态** —— 每次模型调用时，是由**应用或 Agent Runtime** 为这一轮调用专门构造一个输入上下文。\n\n2. **Context 的组成部分可能包括**：\n   - 系统指令（system instructions）\n   - 应用指令\n   - 用户消息\n   - 历史对话\n   - 工具定义（tool definitions）\n   - 检索结果（retrieval results）\n   - 其他运行时信息\n\n3. **关键推论（笔记原文）**：模型当前看到的 context ≠ 系统拥有的全部信息。某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型就无法直接使用它。\n\n## 帮你梳理一下理解\n\n可以把 Context 的构建想象成一个\"装配流水线\"：\n\n- **每一轮调用都是重新组装的**：Agent Runtime 在每轮调用前，从系统状态里挑选当前需要的信息（对话历史、相关工具、检索到的资料等），打包成一份输入交给模型。\n- **注入是显式的，不是自动的**：模型没有\"后门\"可以访问应用的全部数据。没装进去的东西，对模型来说就是不存在。\n- 这也呼应了你选中的那句话：\"检索质量比数量更重要\"——因为 context 是手工（程序化）构建的，塞入过多噪声会稀释有效信息。\n\n## 边界说明\n\n以上全部来自这次检索到的这一节笔记。笔记没有进一步展开\"构建策略\"的细节（比如如何决定哪些历史对话被保留、检索结果如何排序过滤等），如果你想深入这部分，笔记里目前没有覆盖。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/85a14155d5647684da246a0ae9d81e1c",
+            "session_id": "106",
+            "turn_index": "1",
+            "resolved_query": "Agent 的 Context 是怎么构建的？",
+            "relation": "NEW_TOPIC",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 879,
+              "output": 405
+            },
+            "duration_ms": 12496,
+            "message_count": 5,
+            "metrics": {
+              "k": 1,
+              "retrieved_chunks": [
+                "A01"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [],
+              "recall": 1,
+              "hnr": null,
+              "mrr": 1,
+              "ndcg": 1,
+              "precision": 1,
+              "noise_ratio": 0
+            },
+            "evidence": "",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01"
+            ]
+          },
+          {
+            "turn": 2,
+            "question": "对话历史太长会怎样？",
+            "submit": "submitted",
+            "msgCount": 4,
+            "wait": "answer-shown",
+            "answer": "我需要说明一下：这次检索没有返回关于\"context window 容量限制\"的笔记（第二次检索被系统告知证据额度已用完）。虽然你之前问过相关话题、当时的来源是 `Understanding Context Windows.md`，但那份笔记的内容**这次没有返回给我**，所以我不能直接引用它。以下回答会区分清楚来源。\n\n## 笔记中确实有的事实\n\n来自 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]：\n\n- 模型每一轮看到的 context 是由应用或 Runtime **专门构造**的，包含历史对话、系统指令、检索结果等。\n- 关键一点：**没被注入 context 的信息，模型就无法直接使用**——哪怕它还存储在应用里。\n\n这条笔记虽然没有直接讲\"太长会怎样\"，但它给出了推理的基础。\n\n## 基于笔记的推理（我的推断，非笔记原文）\n\n结合\"context 是逐轮构建的\"这一事实，可以推出：\n\n1. **Context 是有限资源**：每次调用都要把历史对话重新装进去，对话越长，占用的输入空间越大。\n2. **总有装不下的一天**：当历史对话超过模型的输入上限，Runtime 必须做取舍——比如丢弃最早的消息、把旧对话压缩成摘要、只保留最近的若干轮。\n3. **后果是\"选择性遗忘\"**：被丢弃或压缩掉的内容，对这一轮调用来说就不存在了。这正好对应笔记里那句\"如果这一轮没有被重新注入 context，模型仍然无法直接使用\"。\n4. 这也呼应了你选中的那句话：\"检索质量比数量更重要\"——因为空间紧张，塞什么进去、丢什么出来，质量就至关重要。\n\n## 边界说明\n\n具体的应对策略（滑动窗口、摘要压缩、重要性筛选等）在你的笔记 `Understanding Context Windows.md` 里可能有更详细的讨论，但这份笔记这次检索没有返回内容，我无法引用原文。如果你想让我基于那份笔记回答，可以再发一次相关问题触发检索，或者直接把笔记内容贴给我。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/45670d6533c5dc434a19fc2de20f9f1b",
+            "session_id": "106",
+            "turn_index": "2",
+            "resolved_query": "在 Agent 的 Context 构建中，如果加入的历史对话（conversation history）太长会有什么影响？请查找笔记中关于 Context 过长（如上下文窗口限制、检索质量下降、噪声增多）的论述。",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/编程语言中的上下文.md",
+              "Reading notes/笔记方法对比.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 4591,
+              "output": 722
+            },
+            "duration_ms": 26739,
+            "message_count": 11,
+            "metrics": {
+              "k": 3,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:笔记方法对比",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "笔记方法对比",
+                "编程语言中的上下文"
+              ],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": 0,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "Source: [[Reading notes/笔记方法对比.md#康奈尔笔记法|笔记方法对比 › 康奈尔笔记法]]\nIdentity: unknown\nEpistemic status: unverified\n## 康奈尔笔记法\n\n康奈尔笔记法把一页纸分成三栏：右侧笔记栏记录主要内容，左侧线索栏写关键词和提问，底部摘要栏用自己的话总结整页。课后按\"5R\"流程使用：记录（Record）、简化（Reduce）、背诵（Recite）、反思（Reflect）、复习（Review）。适合课堂听讲和阅读系统性教材。\n---\nThe requested local passages were already supplied earlier in this run, or the shared local evidence character budget has been reached. Reuse the existing evidence.",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:笔记方法对比",
+              "OTHER:编程语言中的上下文"
+            ]
+          },
+          {
+            "turn": 3,
+            "question": "压缩会丢什么细节？",
+            "submit": "submitted",
+            "msgCount": 6,
+            "wait": "answer-shown",
+            "answer": "我先说明检索情况：这次我检索了你的笔记库，但没有返回任何专门讲\"压缩损失细节\"的笔记内容（返回的只有 `A01 Context 是什么` 和一份与编程语言相关的笔记，后者与本题无关）。你之前提到的 `Understanding Context Windows.md` 这次仍未被检索到，我无法引用它的原文。\n\n## 笔记中有的事实\n\n[[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]] 提供的推理基础仍然是那条：**没被注入本轮 context 的信息，模型无法直接使用**。压缩本质上就是在决定\"哪些信息不再被注入\"。\n\n## 我的分析（推断，非笔记原文）\n\n基于\"压缩 = 把旧对话换成摘要\"这一常见做法，通常会损失这几类细节：\n\n1. **精确的字面信息**：具体数字、日期、文件名、代码片段、错误信息的原文。摘要会概括成\"讨论过某配置问题\"，但具体的端口号或报错文本可能没了。\n2. **过程的推理痕迹**：当时为什么排除某个方案、尝试过哪些失败的思路。摘要往往只保留结论，丢掉论证过程——而有时候\"走过的弯路\"恰恰是避免重蹈覆辙的关键。\n3. **细微的语气和意图**：用户随口提到的一个偏好、一句\"以后可能要做 X\"的伏笔。这类信息在摘要时容易被判定为\"不重要\"。\n4. **顺序和因果关系**：多条信息被压缩后，哪件事发生在先、哪个决定导致了哪个结果，可能变得模糊。\n5. **低频但关键的例外**：摘要倾向于保留\"主线\"，少数派信息（一次性的特殊要求、边界条件）最容易被牺牲。\n\n## 值得你自己思考的问题\n\n这也回到你选中的那句话——\"检索质量比数量更重要\"。压缩和检索其实是同一枚硬币的两面：都是在有限空间里做取舍。你可以想想：**判断\"什么细节可以丢\"的标准应该是什么？** 是按时间远近、按与当前任务的相关性，还是按信息类型（比如事实优先保留、闲聊优先丢弃）？\n\n## 边界说明\n\n以上第 1–5 点是我基于一般性知识的分析，不是来自你的笔记。如果你的 `Understanding Context Windows.md` 里有更具体的讨论，可以再问我一次触发检索，或直接把相关段落贴出来，我再对照原文帮你解读。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/6223fa30eee72b075535c22a635202c2",
+            "session_id": "106",
+            "turn_index": "3",
+            "resolved_query": "当对话历史太长需要被压缩（如摘要、截断）以适应 context window 时，压缩过程会丢失哪些细节信息？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/笔记方法对比.md",
+              "Reading notes/编程语言中的上下文.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 6550,
+              "output": 712
+            },
+            "duration_ms": 21952,
+            "message_count": 13,
+            "metrics": {
+              "k": 4,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:编程语言中的上下文",
+                "OTHER:编程语言中的上下文",
+                "OTHER:笔记方法对比"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "编程语言中的上下文",
+                "编程语言中的上下文",
+                "笔记方法对比"
+              ],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": 0,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "Source: [[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]]\nIdentity: unknown\nEpistemic status: unverified\n## 执行上下文\n\n运行时语境里，执行上下文指函数调用时保存局部变量和返回地址的环境，例如 JavaScript 的调用栈帧。每个栈帧就是一层执行上下文。\n\n---\n\nSource: [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]\nIdentity: unknown\nEpistemic status: unverified\n## A01 Context 是什么\n\n一次模型调用时，模型并不是直接读取应用的全部状态，而是由应用或 Agent Runtime 为这一轮调用构造一个输入上下文。这个上下文可能包含系统指令、应用指令、用户消息、历史对话、工具定义、检索结果以及其他运行时信息。\n\n因此，模型当前看到的 context 不等于系统拥有的全部信息。某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n---\nSource: [[Reading notes/编程语言中的上下文.md#上下文无关文法|编程语言中的上下文 › 上下文无关文法]]\nIdentity: unknown\nEpistemic status: unverified\n## 上下文无关文法\n\n上下文无关文法（CFG）是形式语言理论中的概念：一条产生式规则无论被什么符号包围都适用，与\"上下文\"无关。编程语言的语法大多用 CFG 描述，例如表达式规则 `expr → expr + term`。",
+            "actual_action": "REPEAT_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:笔记方法对比",
+              "OTHER:编程语言中的上下文"
+            ]
+          },
+          {
+            "turn": 4,
+            "question": "那 memory 呢，和这个是一回事吗？",
+            "submit": "submitted",
+            "msgCount": 8,
+            "wait": "answer-shown",
+            "answer": "检索没有返回理想的内容——只找到一条关于\"上下文无关文法\"的笔记（与本题无关）。你之前问过类似问题时引用的 `Understanding Context Windows.md` 这次依然没有返回原文，所以我不能假装引用它。以下回答会严格区分来源。\n\n## 笔记中有的事实\n\n来自 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]：\n\n- 模型每轮看到的 context 由应用/Runtime 构造，包含系统指令、历史对话、检索结果、工具定义等。\n- **未被注入本轮 context 的信息，模型无法直接使用**——哪怕它存储在应用里。\n\n## 基于笔记的区分（我的推断，非笔记原文）\n\nMemory 和对话历史（对话历史是 context 的一部分）**不是一回事**，可以这样理解：\n\n1. **对话历史是\"原材料\"**：完整的、按时间顺序的对话记录。它能不能被模型看到，取决于这一轮是否被注入 context（前面聊过：太长就要截断或压缩）。\n\n2. **Memory 是\"提炼后的存储\"**：通常是应用层主动提取并保存的信息——比如用户偏好、关键事实、过往结论。它存在 context **之外**，是应用状态的一部分。\n\n3. **两者的关键联系恰好来自笔记那句话**：memory 存在应用里，并不等于模型\"知道\"它。笔记明确说\"某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用\"。所以 **memory 要生效，也必须被检索出来、注入到本轮 context 中**。\n\n打个比方：\n\n- **Memory** 像你的笔记本——记在纸上的东西长期存在，但合上的笔记本对你此刻的答题没有直接帮助。\n- **Context** 像你摊开在桌面上的那几页——只有翻开摆出来的，才参与这一轮思考。\n- **对话历史** 则是会议录音的逐字稿——完整但冗长，需要经过筛选或摘要才能摆上桌。\n\n## 值得你自己思考的问题\n\n顺着这个区分可以追问：如果 memory 也要经过\"检索并注入\"这一步，那 memory 系统和前面讨论的\"对话历史压缩\"是不是面临**同一个核心问题**——在有限空间里，选什么进来？这正是你选中的那句\"检索质量比数量更重要\"反复出现的原因。\n\n## 边界说明\n\n第 1–3 点的具体表述（尤其 memory 的定义）是我的推断性解释，不是笔记原文。如果你的 `Understanding Context Windows.md` 里有对 memory 的明确定义，这次检索没能取到它——你可以再触发一次检索，或把相关段落贴出来，我再对照原文校正上面的理解。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/7bb1fb538598d4b9dc5baf4ed7ff49d4",
+            "session_id": "106",
+            "turn_index": "4",
+            "resolved_query": "AI agent 的 memory（记忆）和 context window（上下文窗口）是一回事吗？两者有什么区别和联系？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/编程语言中的上下文.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 5258,
+              "output": 743
+            },
+            "duration_ms": 21591,
+            "message_count": 13,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "编程语言中的上下文"
+              ],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": 0,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "Source: [[Reading notes/编程语言中的上下文.md#上下文无关文法|编程语言中的上下文 › 上下文无关文法]]\nIdentity: unknown\nEpistemic status: unverified\n## 上下文无关文法\n\n上下文无关文法（CFG）是形式语言理论中的概念：一条产生式规则无论被什么符号包围都适用，与\"上下文\"无关。编程语言的语法大多用 CFG 描述，例如表达式规则 `expr → expr + term`。",
+            "actual_action": "REPEAT_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:笔记方法对比",
+              "OTHER:编程语言中的上下文"
+            ]
+          },
+          {
+            "turn": 5,
+            "question": "所以我现在问到的 memory 这一块，在最开始说的 Context 里面到底处于什么位置？",
+            "submit": "submitted",
+            "msgCount": 10,
+            "wait": "answer-shown",
+            "answer": "这次没有新的检索，我基于对话中已经展示过的证据来回答——主要是 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]，以及前几轮出现过的那段关于 Context 与 Memory 关系的摘录（原文出处链接当时未随文返回，所以我只引用内容、不虚构笔记名）。\n\n## 笔记中有的事实\n\n1. A01 笔记说：context 是**每一轮调用时由应用/Runtime 构造的输入**，可能包含系统指令、应用指令、用户消息、历史对话、**检索结果**等。\n2. 同一条笔记强调：信息即使存储在应用中，**没有被注入本轮 context，模型就无法直接使用**。\n3. 之前对话中出现过的摘录进一步说明：**context 是模型这一轮的实际输入；memory 是可能长期保存、但必须被重新写入 context 才会影响这一轮行为的应用状态**。\n\n## 直接的答案\n\n**Memory 不在 Context 里面，它在 Context 外面。**\n\n更准确地说，两者是这样的位置关系：\n\n```\n应用系统\n ├── Memory（长期存储，应用状态的一部分）\n ├── 对话历史（原始记录，也是存储）\n └── ……其他运行时数据\n        │\n        ▼  每一轮调用时，Runtime 从中挑选、组装\n   Context（本轮实际输入）\n```\n\n- **Memory 属于\"系统拥有的信息\"**——它存在于应用层，可以跨轮次、跨会话长期保存。\n- **Context 是\"模型这一轮实际看到的东西\"**——是临时的、每轮重建的。\n- 两者的交界面只有一个动作：**注入**。memory 只有被检索出来、作为输入的一部分（比如 A01 列的\"检索结果\"那一项）放进本轮 context，才会影响模型的回答。\n\n## 一个容易混淆的点（推断）\n\n你可能会想：\"对话历史也在 context 里，memory 也被注入 context，那它们不是一回事吗？\"区别在于**来源和形态**（这是我的推断，非笔记原文）：\n\n- 对话历史是**未经加工的时间流**——按顺序的原始记录；\n- memory 是**加工提炼后的条目**——被显式保存的事实、偏好、结论。\n\n它们进入 context 的通道也不同：历史通常靠\"保留最近的 N 轮/压缩\"，memory 靠\"检索相关性\"。但最终殊途同归——**都必须落进本轮 context 这唯一的入口**。\n\n## 一句话总结\n\n用之前那个比喻：memory 是合上的笔记本（在系统里，不在桌面上），context 是摊开的那几页（本轮输入）。你现在问的 memory，位于 context **之外、注入之前**的位置。\n\n## 边界说明\n\n位置关系的框架（笔记事实 1–3）有依据；\"来源与形态\"的对比是我的推断。`Understanding Context Windows.md` 这次仍未返回原文，如果其中有不同的划分方式，可以再触发检索对照。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/f2e521380d72b0d97edc470d35f7927e",
+            "session_id": "106",
+            "turn_index": "5",
+            "resolved_query": "Memory（记忆）在 Agent 的 Context（上下文）构成中处于什么位置？Context 由系统指令、历史对话、检索结果、工具定义等部分组成，memory 与这些组成部分是什么关系、是否属于被注入本轮 context 的信息？",
+            "relation": "RETURN",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/编程语言中的上下文.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 2944,
+              "output": 869
+            },
+            "duration_ms": 25800,
+            "message_count": 11,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "编程语言中的上下文"
+              ],
+              "recall": 0.5,
+              "hnr": null,
+              "mrr": 1,
+              "ndcg": 0.3373519727104165,
+              "precision": 0.5,
+              "noise_ratio": 0.5
+            },
+            "evidence": "",
+            "actual_action": "REPEAT_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:笔记方法对比",
+              "OTHER:编程语言中的上下文"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "turns_total": 34,
+    "turns_answered": 34,
+    "action_accuracy": 0.68,
+    "action_scored_n": 25,
+    "routing_action_current": 0,
+    "routing_action_ideal": 0.875,
+    "recall": 0.4,
+    "recall_n": 20,
+    "ndcg": 0.4223949950870073,
+    "ndcg_n": 19,
+    "mrr": 0.55,
+    "precision": 0.29385964912280704,
+    "noise_ratio": 0.706140350877193,
+    "citation_verifiability": 1,
+    "citation_n": 34,
+    "citation_failures": [],
+    "abstention": 1,
+    "abstention_n": 1,
+    "freshness_trigger": 0,
+    "freshness_n": 0
+  }
+}

@@ -1,0 +1,700 @@
+{
+  "created": "2026-09-20T10:25:35.099Z",
+  "total": {
+    "count": 30,
+    "final_hit": 20,
+    "search3_file_hit": 27,
+    "search6_file_hit": 28
+  },
+  "direct": {
+    "count": 17,
+    "final_hit": 13,
+    "search3_file_hit": 17,
+    "search6_file_hit": 17
+  },
+  "synonym_rewrite": {
+    "count": 13,
+    "final_hit": 7,
+    "search3_file_hit": 10,
+    "search6_file_hit": 11
+  },
+  "by_type": {
+    "concept": {
+      "count": 11,
+      "final_hit": 6,
+      "search3_file_hit": 8,
+      "search6_file_hit": 9
+    },
+    "howto": {
+      "count": 9,
+      "final_hit": 7,
+      "search3_file_hit": 9,
+      "search6_file_hit": 9
+    },
+    "comparison": {
+      "count": 5,
+      "final_hit": 3,
+      "search3_file_hit": 5,
+      "search6_file_hit": 5
+    },
+    "lookup": {
+      "count": 5,
+      "final_hit": 4,
+      "search3_file_hit": 5,
+      "search6_file_hit": 5
+    }
+  },
+  "decision_rule": {
+    "threshold": 0.6,
+    "metric": "synonym_rewrite.final_hit / synonym_rewrite.count",
+    "result": "proceed_to_embedding"
+  },
+  "results": [
+    {
+      "id": "q01",
+      "type": "concept",
+      "synonym_rewrite": false,
+      "question": "间隔重复的原理是什么",
+      "expected_path": "learning/间隔重复.md",
+      "expected_heading": "核心原理",
+      "search3_paths": [
+        "learning/间隔重复.md",
+        "learning/艾宾浩斯遗忘曲线.md",
+        "learning/刻意练习.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "核心原理",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "alias",
+        "body"
+      ]
+    },
+    {
+      "id": "q02",
+      "type": "concept",
+      "synonym_rewrite": false,
+      "question": "什么是主动回忆",
+      "expected_path": "learning/主动回忆.md",
+      "expected_heading": "概念",
+      "search3_paths": [
+        "learning/主动回忆.md",
+        "health/睡眠周期.md",
+        "clips/记忆宫殿.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "概念",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q03",
+      "type": "concept",
+      "synonym_rewrite": false,
+      "question": "刻意练习是什么",
+      "expected_path": "learning/刻意练习.md",
+      "expected_heading": "定义",
+      "search3_paths": [
+        "learning/刻意练习.md",
+        "health/睡眠周期.md",
+        "coding/git分支策略.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "与机械重复的区别",
+      "final_hit": false,
+      "reasons": [
+        "filename",
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q04",
+      "type": "concept",
+      "synonym_rewrite": false,
+      "question": "睡眠周期是怎么组成的",
+      "expected_path": "health/睡眠周期.md",
+      "expected_heading": "什么是睡眠周期",
+      "search3_paths": [
+        "health/睡眠周期.md",
+        "health/运动恢复.md",
+        "clips/番茄工作法.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "什么是睡眠周期",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "tag",
+        "body"
+      ]
+    },
+    {
+      "id": "q05",
+      "type": "concept",
+      "synonym_rewrite": false,
+      "question": "咖啡因提神的原理是什么",
+      "expected_path": "health/咖啡因.md",
+      "expected_heading": "作用机制",
+      "search3_paths": [
+        "health/咖啡因.md",
+        "learning/间隔重复.md",
+        "clips/记忆宫殿.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "摄入时机",
+      "final_hit": false,
+      "reasons": [
+        "filename",
+        "heading",
+        "tag",
+        "body"
+      ]
+    },
+    {
+      "id": "q06",
+      "type": "concept",
+      "synonym_rewrite": true,
+      "question": "为什么背过的东西过两天就忘",
+      "expected_path": "learning/间隔重复.md",
+      "expected_heading": "核心原理",
+      "search3_paths": [
+        "health/睡眠周期.md",
+        "coding/git分支策略.md",
+        "读书笔记随感.md"
+      ],
+      "search3_hit": false,
+      "search6_rank": null,
+      "read_heading": null,
+      "final_hit": false,
+      "reasons": []
+    },
+    {
+      "id": "q07",
+      "type": "concept",
+      "synonym_rewrite": true,
+      "question": "看书都觉得懂了合上书写不出来是怎么回事",
+      "expected_path": "learning/主动回忆.md",
+      "expected_heading": "概念",
+      "search3_paths": [
+        "读书笔记随感.md",
+        "learning/主动回忆.md",
+        "learning/费曼学习法.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 2,
+      "read_heading": "概念",
+      "final_hit": true,
+      "reasons": [
+        "body"
+      ]
+    },
+    {
+      "id": "q08",
+      "type": "concept",
+      "synonym_rewrite": true,
+      "question": "运动后第二天肌肉酸痛是什么原因",
+      "expected_path": "health/运动恢复.md",
+      "expected_heading": "延迟性酸痛",
+      "search3_paths": [
+        "health/运动恢复.md",
+        "health/睡眠周期.md",
+        "coding/git分支策略.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "延迟性酸痛",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "tag",
+        "body"
+      ]
+    },
+    {
+      "id": "q09",
+      "type": "howto",
+      "synonym_rewrite": false,
+      "question": "费曼学习法的具体步骤是什么",
+      "expected_path": "learning/费曼学习法.md",
+      "expected_heading": "操作步骤",
+      "search3_paths": [
+        "learning/费曼学习法.md",
+        "health/睡眠周期.md",
+        "clips/记忆宫殿.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "操作步骤",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "tag",
+        "body"
+      ]
+    },
+    {
+      "id": "q10",
+      "type": "howto",
+      "synonym_rewrite": false,
+      "question": "间隔重复的节奏怎么安排",
+      "expected_path": "learning/间隔重复.md",
+      "expected_heading": "安排节奏",
+      "search3_paths": [
+        "learning/间隔重复.md",
+        "learning/艾宾浩斯遗忘曲线.md",
+        "learning/刻意练习.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "安排节奏",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "alias",
+        "body"
+      ]
+    },
+    {
+      "id": "q11",
+      "type": "howto",
+      "synonym_rewrite": false,
+      "question": "批量重命名文件用什么命令",
+      "expected_path": "coding/shell技巧.md",
+      "expected_heading": "批量重命名",
+      "search3_paths": [
+        "coding/shell技巧.md",
+        "health/睡眠周期.md",
+        "coding/git分支策略.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "批量重命名",
+      "final_hit": true,
+      "reasons": [
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q12",
+      "type": "howto",
+      "synonym_rewrite": false,
+      "question": "匹配邮箱的正则怎么写",
+      "expected_path": "coding/正则表达式.md",
+      "expected_heading": "常用模式",
+      "search3_paths": [
+        "coding/正则表达式.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "常用模式",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "tag",
+        "body"
+      ]
+    },
+    {
+      "id": "q13",
+      "type": "howto",
+      "synonym_rewrite": true,
+      "question": "想提神的话咖啡什么时候喝比较好",
+      "expected_path": "health/咖啡因.md",
+      "expected_heading": "摄入时机",
+      "search3_paths": [
+        "health/咖啡因.md",
+        "health/睡眠周期.md",
+        "读书笔记随感.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "摄入时机",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "tag",
+        "body"
+      ]
+    },
+    {
+      "id": "q14",
+      "type": "howto",
+      "synonym_rewrite": true,
+      "question": "练完腿很酸怎么快点恢复",
+      "expected_path": "health/运动恢复.md",
+      "expected_heading": "延迟性酸痛",
+      "search3_paths": [
+        "health/运动恢复.md",
+        "clips/番茄工作法.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "延迟性酸痛",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q15",
+      "type": "howto",
+      "synonym_rewrite": true,
+      "question": "本地改了很多提交想整理干净再推上去怎么办",
+      "expected_path": "coding/git分支策略.md",
+      "expected_heading": "rebase 与 merge",
+      "search3_paths": [
+        "coding/git分支策略.md",
+        "读书笔记随感.md",
+        "coding/shell技巧.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "提交规范",
+      "final_hit": false,
+      "reasons": [
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q16",
+      "type": "howto",
+      "synonym_rewrite": true,
+      "question": "新手学正则最容易踩什么坑",
+      "expected_path": "coding/正则表达式.md",
+      "expected_heading": "性能陷阱",
+      "search3_paths": [
+        "coding/正则表达式.md",
+        "health/睡眠周期.md",
+        "coding/git分支策略.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "性能陷阱",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "tag",
+        "body"
+      ]
+    },
+    {
+      "id": "q17",
+      "type": "comparison",
+      "synonym_rewrite": false,
+      "question": "Anki 和 SuperMemo 的算法有什么区别",
+      "expected_path": "learning/间隔重复.md",
+      "expected_heading": "工具对比",
+      "search3_paths": [
+        "learning/刻意练习.md",
+        "health/睡眠周期.md",
+        "learning/间隔重复.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 3,
+      "read_heading": "工具对比",
+      "final_hit": true,
+      "reasons": [
+        "body"
+      ]
+    },
+    {
+      "id": "q18",
+      "type": "comparison",
+      "synonym_rewrite": false,
+      "question": "merge 和 rebase 的区别是什么",
+      "expected_path": "coding/git分支策略.md",
+      "expected_heading": "rebase 与 merge",
+      "search3_paths": [
+        "learning/刻意练习.md",
+        "coding/git分支策略.md",
+        "health/睡眠周期.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 2,
+      "read_heading": "rebase 与 merge",
+      "final_hit": true,
+      "reasons": [
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q19",
+      "type": "comparison",
+      "synonym_rewrite": false,
+      "question": "刻意练习和机械重复差在哪",
+      "expected_path": "learning/刻意练习.md",
+      "expected_heading": "与机械重复的区别",
+      "search3_paths": [
+        "learning/刻意练习.md",
+        "learning/间隔重复.md",
+        "learning/艾宾浩斯遗忘曲线.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "与机械重复的区别",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q20",
+      "type": "comparison",
+      "synonym_rewrite": true,
+      "question": "都说多练就行，什么样的练习才算有效",
+      "expected_path": "learning/刻意练习.md",
+      "expected_heading": "与机械重复的区别",
+      "search3_paths": [
+        "learning/刻意练习.md",
+        "health/睡眠周期.md",
+        "coding/git分支策略.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "定义",
+      "final_hit": false,
+      "reasons": [
+        "filename",
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q21",
+      "type": "comparison",
+      "synonym_rewrite": true,
+      "question": "提交历史拉直和保留分叉各有什么好处",
+      "expected_path": "coding/git分支策略.md",
+      "expected_heading": "rebase 与 merge",
+      "search3_paths": [
+        "coding/git分支策略.md",
+        "health/睡眠周期.md",
+        "learning/艾宾浩斯遗忘曲线.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "提交规范",
+      "final_hit": false,
+      "reasons": [
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q22",
+      "type": "lookup",
+      "synonym_rewrite": false,
+      "question": "每个睡眠周期大约多久的原文在哪",
+      "expected_path": "health/睡眠周期.md",
+      "expected_heading": "周期时长",
+      "search3_paths": [
+        "health/睡眠周期.md",
+        "coding/git分支策略.md",
+        "clips/番茄工作法.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "什么是睡眠周期",
+      "final_hit": false,
+      "reasons": [
+        "filename",
+        "heading",
+        "tag",
+        "body"
+      ]
+    },
+    {
+      "id": "q23",
+      "type": "lookup",
+      "synonym_rewrite": false,
+      "question": "艾宾浩斯实验里 1 天后还记得多少比例",
+      "expected_path": "learning/艾宾浩斯遗忘曲线.md",
+      "expected_heading": "曲线规律",
+      "search3_paths": [
+        "learning/艾宾浩斯遗忘曲线.md",
+        "health/咖啡因.md",
+        "learning/主动回忆.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "曲线规律",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q24",
+      "type": "lookup",
+      "synonym_rewrite": false,
+      "question": "咖啡因的半衰期是几小时",
+      "expected_path": "health/咖啡因.md",
+      "expected_heading": "摄入时机",
+      "search3_paths": [
+        "health/咖啡因.md",
+        "health/睡眠周期.md",
+        "learning/艾宾浩斯遗忘曲线.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "摄入时机",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "tag",
+        "body"
+      ]
+    },
+    {
+      "id": "q25",
+      "type": "lookup",
+      "synonym_rewrite": false,
+      "question": "同一肌群两次力量训练之间至少隔多久",
+      "expected_path": "health/运动恢复.md",
+      "expected_heading": "训练安排",
+      "search3_paths": [
+        "health/运动恢复.md",
+        "health/睡眠周期.md",
+        "learning/艾宾浩斯遗忘曲线.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "训练安排",
+      "final_hit": true,
+      "reasons": [
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q26",
+      "type": "lookup",
+      "synonym_rewrite": true,
+      "question": "不看书凭记忆默写要点算哪种学习方式",
+      "expected_path": "learning/主动回忆.md",
+      "expected_heading": "常见方式",
+      "search3_paths": [
+        "learning/主动回忆.md",
+        "learning/费曼学习法.md",
+        "clips/记忆宫殿.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "常见方式",
+      "final_hit": true,
+      "reasons": [
+        "tag",
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q27",
+      "type": "concept",
+      "synonym_rewrite": true,
+      "question": "读过的书记不住内容怎么办",
+      "expected_path": "learning/主动回忆.md",
+      "expected_heading": "常见方式",
+      "search3_paths": [
+        "读书笔记随感.md",
+        "learning/费曼学习法.md"
+      ],
+      "search3_hit": false,
+      "search6_rank": null,
+      "read_heading": null,
+      "final_hit": false,
+      "reasons": []
+    },
+    {
+      "id": "q28",
+      "type": "concept",
+      "synonym_rewrite": true,
+      "question": "记一串没有规律的清单有什么好办法",
+      "expected_path": "clips/记忆宫殿.md",
+      "expected_heading": "步骤",
+      "search3_paths": [
+        "health/睡眠周期.md",
+        "learning/艾宾浩斯遗忘曲线.md",
+        "coding/git分支策略.md"
+      ],
+      "search3_hit": false,
+      "search6_rank": 5,
+      "read_heading": null,
+      "final_hit": false,
+      "reasons": []
+    },
+    {
+      "id": "q29",
+      "type": "howto",
+      "synonym_rewrite": false,
+      "question": "记忆宫殿怎么用",
+      "expected_path": "clips/记忆宫殿.md",
+      "expected_heading": "步骤",
+      "search3_paths": [
+        "clips/记忆宫殿.md",
+        "learning/主动回忆.md",
+        "learning/间隔重复.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "原理",
+      "final_hit": false,
+      "reasons": [
+        "filename",
+        "heading",
+        "body"
+      ]
+    },
+    {
+      "id": "q30",
+      "type": "concept",
+      "synonym_rewrite": true,
+      "question": "工作总是分心有什么时间管理办法",
+      "expected_path": "clips/番茄工作法.md",
+      "expected_heading": "基本流程",
+      "search3_paths": [
+        "clips/番茄工作法.md",
+        "health/睡眠周期.md",
+        "coding/git分支策略.md"
+      ],
+      "search3_hit": true,
+      "search6_rank": 1,
+      "read_heading": "基本流程",
+      "final_hit": true,
+      "reasons": [
+        "filename",
+        "heading",
+        "body"
+      ]
+    }
+  ]
+}

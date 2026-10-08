@@ -1,0 +1,318 @@
+{
+  "startedAt": "2026-09-23T12:32:16.415Z",
+  "sets": [
+    {
+      "id": "A-语义改述递进",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "我的笔记里有没有讲 context window？如果有，它是怎么说的？",
+          "wait": "answer-shown",
+          "checks": {
+            "trace_found": true,
+            "turn_index_ok": true,
+            "retrieval_called": false,
+            "evidence_nonempty": false,
+            "retrieved_paths": [],
+            "path_hit": false,
+            "evidence_includes": [
+              {
+                "needle": "窗口",
+                "ok": false
+              }
+            ],
+            "evidence_excludes": [],
+            "tokens": {
+              "input": 204,
+              "output": 437
+            },
+            "duration_ms": 17433,
+            "session_id": "13",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/487c743cdfb0c8c9ebd64b733a826b61"
+          },
+          "answer": "没有直接提到 **context window**。\n\n- **原文事实**：这段笔记只说：“Retrieval quality matters more than retrieval volume: a small set of relevant passages beats a large noisy one.” 也就是检索质量比检索数量更重要；少量相关段落胜过大量嘈杂内容。\n- **解释**：它强调的是检索结果的**相关性/信噪比**，而不是上下文长度、窗口大小或 token 限制。\n- **可推断**：如果把这个原则应用到有限的 context window 上，会意味着不要把大量低质量检索结果塞进窗口，而应优先筛选最相关的小集合。但这是基于原则的推断，不是笔记里明确写了 “context window”。",
+          "evidence": ""
+        },
+        {
+          "turn": 2,
+          "question": "笔记里有没有说对话聊得太长快装不下的时候，一般怎么处理？",
+          "wait": "answer-shown",
+          "checks": {
+            "trace_found": true,
+            "turn_index_ok": true,
+            "retrieval_called": false,
+            "evidence_nonempty": false,
+            "retrieved_paths": [],
+            "path_hit": false,
+            "evidence_includes": [
+              {
+                "needle": "压缩",
+                "ok": false
+              }
+            ],
+            "evidence_excludes": [],
+            "tokens": {
+              "input": 675,
+              "output": 786
+            },
+            "duration_ms": 32650,
+            "session_id": "13",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/b45fdeb830e711726fcfb46a53cf7502"
+          },
+          "answer": "没有直接说。它没提“对话太长快装不下”的具体处置，也没提 context window、总结、截断、滑动窗口等做法。\n\n- **原文事实**：笔记只说：“Retrieval quality matters more than retrieval volume: a small set of relevant passages beats a large noisy one.” 即检索/提供内容时，质量优先于数量。\n- **解释**：它反对把大量嘈杂内容塞进去；主张保留小而相关的集合。\n- **可推断**：如果对话快到上限，按这条原则应先做筛选/排序/去重，保留最相关片段，丢弃或压缩低相关、重复、嘈杂内容；而不是继续堆更多历史或检索结果。\n- **边界**：像“总结旧对话”“截断最早消息”“滑动窗口”“重新检索”等是常见工程做法，但不是这段笔记明确说的。",
+          "evidence": ""
+        },
+        {
+          "turn": 3,
+          "question": "那笔记里说压缩之后，最早的内容是不是就丢了？之前问过的东西还能被记住吗？",
+          "wait": "answer-shown",
+          "checks": {
+            "trace_found": true,
+            "turn_index_ok": true,
+            "retrieval_called": false,
+            "evidence_nonempty": false,
+            "retrieved_paths": [],
+            "path_hit": false,
+            "evidence_includes": [
+              {
+                "needle": "摘要",
+                "ok": false
+              }
+            ],
+            "evidence_excludes": [],
+            "tokens": {
+              "input": 1499,
+              "output": 706
+            },
+            "duration_ms": 34957,
+            "session_id": "13",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/115f9af91e8953ce3f3192b7a1bf5dae"
+          },
+          "answer": "笔记本身没有回答这个问题：它没说“压缩”“最早内容是否丢失”“之前问过能否记住”，也没提 memory 或 context window 机制。\n\n- **原文事实**：只强调“少量相关 passages 胜过大量嘈杂内容”。\n- **一般解释**：如果压缩指**总结**，最早的原文细节可能不再出现在上下文里，但关键事实可留在摘要中；如果总结漏掉了，就相当于在当前上下文里丢了。如果是**截断/滑动窗口**，最早内容会直接掉出窗口。若有外部记忆/检索，之后仍可能被重新取回，但取决于系统是否保存且能检索到。\n- **从这条原则可推断**：不要靠保留完整流水账来“记住”，而要把之前问过的重要结论筛成高相关、低噪声的片段；但这只是应用原则，不是笔记明确承诺。\n- **结论**：之前问过的东西**不保证能被记住**；只有在当前上下文、准确摘要，或可重新检索的外部记忆里时，才更可能被继续使用。",
+          "evidence": ""
+        }
+      ]
+    },
+    {
+      "id": "B-干扰项",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "我的笔记里有没有讲 agent 的 context 由哪几部分组成？",
+          "wait": "answer-shown",
+          "checks": {
+            "trace_found": true,
+            "turn_index_ok": true,
+            "retrieval_called": false,
+            "evidence_nonempty": false,
+            "retrieved_paths": [],
+            "path_hit": false,
+            "evidence_includes": [
+              {
+                "needle": "构成",
+                "ok": false
+              }
+            ],
+            "evidence_excludes": [],
+            "tokens": {
+              "input": 205,
+              "output": 208
+            },
+            "duration_ms": 7039,
+            "session_id": "14",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/df612cd3059bdfb8dc99f3e6731061b1"
+          },
+          "answer": "**根据你选中的这段笔记，没有讲到。**\n\n**原文事实：** 这段笔记只有一句话，讲的是检索（retrieval）的质量问题——\"检索质量比检索数量更重要：少量相关的段落胜过大量嘈杂的内容\"。\n\n**推断：** 从内容上看，这句话涉及的是 RAG/检索系统的设计原则，和\"agent 的 context 由哪几部分组成\"（比如系统提示、对话历史、工具定义、检索结果、记忆等这类话题）是不同的主题。笔记里完全没有列出 agent context 的组成部分。\n\n**建议：** 如果你想找这个问题的答案，可能需要去你笔记的其他部分找。你可以再选中其他相关段落发给我，我可以帮你看看那里有没有讲到 agent context 的构成。",
+          "evidence": ""
+        },
+        {
+          "turn": 2,
+          "question": "那笔记里的上下文无关文法，对理解 agent 的 context 有帮助吗？",
+          "wait": "answer-shown",
+          "checks": {
+            "trace_found": true,
+            "turn_index_ok": true,
+            "retrieval_called": false,
+            "evidence_nonempty": false,
+            "retrieved_paths": [],
+            "evidence_includes": [],
+            "evidence_excludes": [],
+            "recorded_evidence_present": false,
+            "tokens": {
+              "input": 449,
+              "output": 337
+            },
+            "duration_ms": 12031,
+            "session_id": "14",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/534855423b29957f13bab3fcb3361957"
+          },
+          "answer": "**我目前看不到那段关于\"上下文无关文法\"的笔记。**\n\n**原文事实：** 你选中给我的这段笔记只有一句话，内容是关于检索质量的：\"检索质量比检索数量更重要：少量相关的段落胜过大量嘈杂的内容。\"里面**没有提到上下文无关文法**。\n\n**解释：** 有可能你的笔记里确实有上下文无关文法（CFG）的内容，但它没有被选中发给我，所以我无法针对那段具体内容做判断。\n\n**基于一般知识的推断（不是来自你的笔记）：** 可以简单说说这两者的一般关系——\n\n- **上下文无关文法**里的\"context-free\"（上下文无关）是指：一个非终结符的展开规则不依赖于它周围出现什么符号。\n- **Agent 的 context** 指的是：模型做决策时能看到的信息集合（系统提示、历史对话、工具结果等）。\n\n这两者里的\"上下文\"**含义不同**，一个是形式语言理论的概念，一个是运行时输入信息的概念。所以仅凭\"上下文无关文法\"这个知识点，对理解 agent context 的构成帮助有限；不过如果你学的是\"如何用文法约束模型输出格式\"这类应用，那倒是和 agent 的工具调用、结构化输出有点关系。\n\n**建议：** 如果你把笔记里讲上下文无关文法的那段也选中发给我，我就能结合原文帮你准确判断它和 agent context 有没有关联。",
+          "evidence": ""
+        }
+      ]
+    },
+    {
+      "id": "C-块选择",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "笔记里的康奈尔笔记法具体怎么用？",
+          "wait": "answer-shown",
+          "checks": {
+            "trace_found": true,
+            "turn_index_ok": true,
+            "retrieval_called": false,
+            "evidence_nonempty": false,
+            "retrieved_paths": [],
+            "path_hit": false,
+            "evidence_includes": [
+              {
+                "needle": "康奈尔",
+                "ok": false
+              }
+            ],
+            "evidence_excludes": [
+              {
+                "needle": "Zettelkasten",
+                "ok": true
+              }
+            ],
+            "tokens": {
+              "input": 199,
+              "output": 920
+            },
+            "duration_ms": 32844,
+            "session_id": "15",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/6af8bfdbfb756c056676a1b3d9850e75"
+          },
+          "answer": "先划清边界：你选中的那句英文只讲“检索质量比检索数量更重要；少量相关段落胜过大量噪声段落”，**并没有介绍康奈尔笔记法**。所以下面的具体步骤属于通用方法补充，不是从该段直接读出的。\n\n【补充说明：康奈尔笔记法常规用法】  \n把一页分成三区：右侧大“笔记区”、左侧窄“线索/提问栏”、底部“总结区”。按 5 步走：\n\n1. 记录：听课/阅读时只在右侧记要点，别逐字抄。  \n2. 提炼：课后在左侧写关键词、问题或提示词，如“为何质量>数量？”  \n3. 回忆：遮住右侧，只看左侧提示，用自己的话复述。  \n4. 总结：底部用 1–2 句概括本页核心。  \n5. 复习：隔几天用左侧问题自测，卡壳处回到右侧补。\n\n【与选中段的关联：这是推断】  \n康奈尔法的左侧线索和底部总结，本质上是在制造“少量但高质量”的检索入口：复习时不重读整页，而用几个精准提示触发记忆。这与“质量胜过数量”的原则相合，但这段英文本身并没有这样说。\n\n如果你说的“笔记里”指某份具体笔记，把相关那段贴给我，我可以按原文逐句帮你拆成可操作步骤。",
+          "evidence": ""
+        },
+        {
+          "turn": 2,
+          "question": "笔记里卡片盒笔记法和康奈尔笔记法，分别适合什么人？",
+          "wait": "answer-shown",
+          "checks": {
+            "trace_found": true,
+            "turn_index_ok": true,
+            "retrieval_called": false,
+            "evidence_nonempty": false,
+            "retrieved_paths": [],
+            "path_hit": false,
+            "evidence_includes": [
+              {
+                "needle": "卡片盒",
+                "ok": false
+              }
+            ],
+            "evidence_excludes": [],
+            "tokens": {
+              "input": 1152,
+              "output": 909
+            },
+            "duration_ms": 40703,
+            "session_id": "15",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/9277701103fba6d7017cde2024818d22"
+          },
+          "answer": "先说明边界：你选中的那句只给出原则——**“检索质量比检索数量更重要；少量相关段落胜过大量噪声段落”**。它没有讲卡片盒或康奈尔，也没有说适合谁；所以以下是通用方法判断，不是从该段直接读出。若你指某份具体“笔记里”的表述，贴原文我可以逐句对齐。\n\n【通用解释，非来源】  \n- **卡片盒笔记法 / Zettelkasten**：适合长期做知识复利的人——研究生、写作者、知识工作者、咨询/产品/策划这类要把旧想法反复重组出新观点的人。前提是你愿意把笔记拆成原子化想法、写清“为什么相关”、持续加链接。它强在跨主题连接与长期检索，弱在维护成本高；只想短期突击、讨厌整理系统的人会受挫。  \n- **康奈尔笔记法**：适合输入结构化、目标偏“学懂—记住—考过/讲清”的人——学生、听课/培训/考证者、新手需要固定版式来练主动回忆。它强在一页内完成记录、提问、总结，复习路径短平快；弱在跨页、跨学科的非线性联结不如卡片盒。\n\n【和选中原则的关联，属推断】  \n两者都不是“记得越多越好”，而是在造**少量高质量检索线索**：康奈尔用左侧提示词+底部总结服务近期回忆；卡片盒用永久卡片+链接服务远期组合式检索。选择标准可以看你的“检索场景”：几周后要考试/汇报，偏康奈尔；几个月几年后要写作/研究/产出，偏卡片盒。\n\n实用组合：课堂/阅读当下用康奈尔快速结构化；每周把值得长期保留的观点改写成卡片盒卡片。提醒自己对应那句原则：宁可少一点，但要每条都能被 future-you 准确找回来。",
+          "evidence": ""
+        }
+      ]
+    },
+    {
+      "id": "D-框架锚定",
+      "turns": [
+        {
+          "turn": 1,
+          "question": "帮我根据笔记梳理 agent 的 context 工程整体框架，各部分之间是什么关系？",
+          "wait": "answer-shown",
+          "checks": {
+            "trace_found": true,
+            "turn_index_ok": true,
+            "retrieval_called": false,
+            "evidence_nonempty": false,
+            "retrieved_paths": [],
+            "path_hit": false,
+            "evidence_includes": [
+              {
+                "needle": "context",
+                "ok": false
+              }
+            ],
+            "evidence_excludes": [],
+            "tokens": {
+              "input": 208,
+              "output": 1369
+            },
+            "duration_ms": 59469,
+            "session_id": "16",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/2866cd0a7d606cda2c878cbcc9082342"
+          },
+          "answer": "先说明依据：你选中的笔记只有一句可直接确认——**“检索质量比检索数量更重要：一小组相关段落胜过一大堆噪声内容。”** 下面的整体框架是我把这句话当作核心原则做的梳理；其中【源句事实】是笔记本身，【解释】是对它的展开，【推断】是 agent context 工程里常见的通用框架，不是这段话直接给出的。\n\n## 一句话主线\n**Agent 的 context 工程 = 在有限 token/注意力预算内，持续把“对当前任务最有用的状态”选出来、压干净、组织好，喂给模型，并用结果反馈继续优化选择。**\n\n## 整体框架与关系\n\n```text\n任务/目标\n   ↓ 决定要“知道什么”\n上下文来源：对话状态｜短期记忆｜长期记忆｜工具结果｜检索文档｜系统约束\n   ↓ 检索/召回\n候选上下文池\n   ↓ 过滤·排序·去重·权限/时效检查      ← 核心原则：质量 > 数量\n精选上下文（小而准）\n   ↓ 压缩/摘要/结构化/隔离噪声\nPrompt/Context 组装\n   ↓\n模型推理或调用工具\n   ↓\n输出/行动 + 新观察\n   ↓ 评估：相关性、正确性、成本、延迟、幻觉\n写回记忆/更新索引/调整检索策略\n```\n\n### 各部分关系\n1. **任务定义是上游闸门**  \n   先知道 agent 要完成什么，才知道哪些上下文“相关”。没有任务标准，检索会倾向于“多抓保险”，这正是源句反对的。\n\n2. **检索/召回负责“覆盖面”，过滤排序负责“纯度”**  \n   召回可以宽一点，但进入最终 context 前必须收紧。【源句事实】强调：最终进入模型的是**少量高相关**，而不是大量含噪材料。\n\n3. **压缩与结构化是“信噪比放大器”**  \n   相关内容也可能太长，需要摘要、抽字段、去重、分块标注来源。目标不是变短而已，而是让模型更快定位关键约束。\n\n4. **工具结果与记忆要写回，形成闭环**  \n   agent 不是单次问答：行动后会产生新观察，错误结论也可能污染记忆。所以要评估哪些结果可写回长期记忆，哪些只留在当轮状态。\n\n5. **评估指标决定系统会不会“越用越聪明”**  \n   至少看四类：相关性、答案正确性/可核验性、token 成本与延迟、噪声导致的幻觉/偏航。若只优化“召回更多”，会和源句原则冲突。\n\n## 用你的原则做取舍的 3 个问题\n放一段上下文进 prompt 前问：\n\n- **相关吗？** 不相关直接删，哪怕很权威。\n- **必要吗？** 相关但冗余，就压缩、合并或只留结论+出处。\n- **可信/新鲜吗？** 过时、冲突、低质量内容要隔离或标注，不能和事实平铺在一起。\n\n## 关键理解\n【解释】“小而相关胜过大而噪”的原因是：噪声不只是浪费 token，它会**稀释注意力、增加错误联想、抬高成本和延迟**，还可能让模型把低质量内容当成依据。  \n【推断】所以 context 工程的难点通常不在“能不能找到更多”，而在**选择、过滤、压缩、评估**这一整条质量控制链。\n\n如果你把完整笔记发我，我可以按你笔记里的原始术语重新映射成一版“你的框架”，并把每条笔记归到：检索、记忆、压缩、组装、评估或工具闭环。",
+          "evidence": ""
+        },
+        {
+          "turn": 2,
+          "question": "你刚才提到检索增强，笔记里它具体是怎么给 context 提供内容的？",
+          "wait": "answer-shown",
+          "checks": {
+            "trace_found": true,
+            "turn_index_ok": true,
+            "retrieval_called": true,
+            "evidence_nonempty": true,
+            "retrieved_paths": [
+              "Reading notes/Agent Context 工程框架.md",
+              "Reading notes/笔记方法对比.md"
+            ],
+            "path_hit": true,
+            "evidence_includes": [
+              {
+                "needle": "RAG",
+                "ok": true
+              }
+            ],
+            "evidence_excludes": [],
+            "tokens": {
+              "input": 4151,
+              "output": 846
+            },
+            "duration_ms": 42906,
+            "session_id": "16",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/6103d709facb5549195abc7855705ddc"
+          },
+          "answer": "可以。刚查到一条相关笔记，但它的证据状态标为 **unverified**；另一条“康奈尔笔记法”与问题无关，我不采用。\n\n**笔记原文事实**：在 [[Reading notes/Agent Context 工程框架.md#检索增强作为 context 的来源]] 里，RAG 的流程被说成四步：  \n**把用户问题向量化 → 在笔记库中召回相关片段 → 把片段注入 context → 再基于这些内容生成回答。**  \n并且它强调：关键不在“召回多少”，而在“召回得准不准”；**少量精准片段胜过大量嘈杂片段**。这和你选中的那句原则一致。\n\n我的整理是：检索增强给 context 提供内容的方式不是“把资料库整个倒进 prompt”，而是**问题驱动的选择性注入**——先用当前问题去索引里找候选证据，只把相关片段放进上下文，让模型围绕这些片段回答。笔记没有展开具体工程细节，比如 embedding 模型、chunk 大小、top-k、重排序、去重或引用格式；这些属于我可以帮你进一步补的实现层，但不是这条笔记直接说的。\n\n放回刚才的框架里，RAG 位于 **“上下文来源 → 候选上下文池 → 精选上下文”** 这一段：它负责把外部/笔记知识带进场，但还不是最终 context；最终进入模型的内容仍要受“质量 > 数量”约束，经过筛选、压缩和组装。",
+          "evidence": "Source: [[Reading notes/Agent Context 工程框架.md#检索增强作为 context 的来源|Agent Context 工程框架 › 检索增强作为 context 的来源]]\nIdentity: unknown\nEpistemic status: unverified\n## 检索增强作为 context 的来源\n\nRAG（检索增强生成）的流程是：把用户问题去向量化，在笔记库中召回相关片段，把片段注入 context 后再生成回答。这个链路的关键不在召回多少，而在召回得准不准——少量精准片段胜过大量嘈杂片段。\n\n---\n\nSource: [[Reading notes/笔记方法对比.md#康奈尔笔记法|笔记方法对比 › 康奈尔笔记法]]\nIdentity: unknown\nEpistemic status: unverified\n## 康奈尔笔记法\n\n康奈尔笔记法把一页纸分成三栏：右侧笔记栏记录主要内容，左侧线索栏写关键词和提问，底部摘要栏用自己的话总结整页。课后按\"5R\"流程使用：记录（Record）、简化（Reduce）、背诵（Recite）、反思（Reflect）、复习（Review）。适合课堂听讲和阅读系统性教材。"
+        },
+        {
+          "turn": 3,
+          "question": "那笔记里有没有说 context 是不是塞得越满越好？",
+          "wait": "answer-shown",
+          "checks": {
+            "trace_found": true,
+            "turn_index_ok": true,
+            "retrieval_called": false,
+            "evidence_nonempty": false,
+            "retrieved_paths": [],
+            "path_hit": false,
+            "evidence_includes": [
+              {
+                "needle": "误区",
+                "ok": false
+              }
+            ],
+            "evidence_excludes": [],
+            "tokens": {
+              "input": 2222,
+              "output": 461
+            },
+            "duration_ms": 20129,
+            "session_id": "16",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/f0986c494150faab6ac3c54b115b7afc"
+          },
+          "answer": "有**相近说法**，但笔记不是逐字讨论“context 要不要塞满”。\n\n- **源事实**：那条笔记说的是检索增强环节：把问题向量化后召回片段、注入 context；关键不在“召回多少”，而在“召回得准不准”；**少量精准片段胜过大量嘈杂片段**。证据状态仍是 **unverified**。\n- **解释**：所以它明确反对的是“以为召回/注入越多就越好”。换句话说，笔记的倾向是：**context 不是塞得越满越好，而是越相关、越干净越好。**\n- **推断/边界**：这条笔记没有进一步给出 context window 的最佳填充率、token 预算分配、遗漏相关信息的风险，也没说“宁可空也不要满”。如果要严谨确认，需要再查有没有更直接的笔记，比如关键词“context window”“塞满”“token 预算”“越多越好”。",
+          "evidence": ""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,747 @@
+{
+  "startedAt": "2026-10-07T16:10:53.562Z",
+  "model": "kimi-k3",
+  "suites": {
+    "multi": [
+      {
+        "scenario_id": "L1",
+        "topic": "术语定义 → 机制困惑（问词义，真正想知道它在链路中的作用）",
+        "turns": [
+          {
+            "turn": 1,
+            "question": "Compaction 是什么意思？",
+            "submit": "submitted",
+            "msgCount": 2,
+            "wait": "answer-shown",
+            "answer": "检索没有返回直接讲 Compaction 的笔记内容（目前可见的笔记只涉及\"Context 是什么\"等主题），所以下面主要基于通用知识来解释，并明确区分来源。\n\n## Compaction 的基本含义\n\n**通用词义**（解释，非笔记内容）：Compaction 原意是\"压缩、压实\"，在计算机领域一般指\"把占用空间的内容压缩得更紧凑\"的过程。\n\n**在 Agent / LLM 语境下的含义**（解释 + 推断）：通常指**上下文压缩**——当对话历史越来越长、快要超出 context window 时，系统会把较早的对话内容**总结/压缩成更短的形式**再放回 context，而不是原样保留全部历史。\n\n## 和你笔记的联系\n\n这正好呼应你笔记里的一个事实：\n\n- 来源事实：[[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]] 指出\"模型当前看到的 context 不等于系统拥有的全部信息\"，每轮调用的 context 是由应用构造的。\n- 推断：Compaction 就是这种\"构造\"的一种手段——应用决定把历史压缩后再注入 context，模型看到的就不再是原始对话，而是压缩后的摘要。\n\n## 需要注意的代价\n\n- 压缩是**有损**的：细节（具体措辞、中间步骤、次要信息）可能在摘要中丢失。\n- 这也解释了为什么\"检索质量重于检索数量\"（你选中的段落）：与其把全部历史塞进去再做压缩，不如精心挑选少量相关内容注入 context。\n\n如果你想深入了解，建议你在笔记里专门记一条 Compaction 的笔记；目前的笔记体系里还没有直接覆盖这个概念的条目。",
+            "gold_latent": {
+              "scenario": "连续性从哪来：模型本身无状态，它记得我 是每轮重新注入 context 制造的错觉；用户隐含假设=模型有持续记忆",
+              "expected_reveal_turn": 3,
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "理想：不只给定义，还说明它在 context 管理链路中的角色"
+            },
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/41900e9c1807204e1acc27b46a08ea29",
+            "session_id": "107",
+            "turn_index": "1",
+            "resolved_query": "Compaction 是什么意思？",
+            "relation": "NEW_TOPIC",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/编程语言中的上下文.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 2205,
+              "output": 499
+            },
+            "duration_ms": 16031,
+            "message_count": 7,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "编程语言中的上下文"
+              ],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": 0,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "The requested local passages were already supplied earlier in this run, or the shared local evidence character budget has been reached. Reuse the existing evidence.",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:编程语言中的上下文"
+            ]
+          },
+          {
+            "turn": 2,
+            "question": "那它和 summarize 是一回事吗？",
+            "submit": "submitted",
+            "msgCount": 4,
+            "wait": "answer-shown",
+            "answer": "这一轮我没有做新的检索，以下基于上一轮已给出的笔记事实和通用知识来分析，并明确区分。\n\n## 两者的关系\n\n**解释（通用知识）**：它们关系密切，但不完全等同——\n\n- **Summarize（摘要）**：指的是\"把长文本压缩成短文本\"这个**具体动作**，是一种技术操作。\n- **Compaction（压缩）**：在 Agent 语境下是一个**更大概念的策略/流程**，指为腾出 context 空间而对历史进行的整体处理。\n\n## 关键区别\n\n**推断**：可以这样理解——\n\n1. **Summarize 是 Compaction 的常见手段，但不是唯一手段**。Compaction 还可以通过其他方式实现，例如：\n   - 直接**丢弃**（truncate）最旧的消息；\n   - 把详细信息**卸载到外部存储**（文件、数据库），context 里只留一个引用指针；\n   - 只保留**结构化的关键状态**（任务目标、已完成的步骤），而非自然语言摘要。\n\n2. **目的不同**。Summarize 的目标是\"信息压缩后仍可读\"；Compaction 的目标是\"让 context 不超窗、同时保住关键状态\"，摘要只是达成这个目标的工具之一。\n\n## 和笔记的联系\n\n来源事实：[[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]] 说 context 是应用每轮\"构造\"出来的。Compaction 是构造策略之一，而 summarize 只是这个策略里可能用到的一种操作——两者是\"策略 vs. 手段\"的层级关系，不是同义词。\n\n简单说：**所有的对话摘要式 compaction 都是 summarize，但 compaction 不等于 summarize。**",
+            "gold_latent": {
+              "scenario": "连续性从哪来：模型本身无状态，它记得我 是每轮重新注入 context 制造的错觉；用户隐含假设=模型有持续记忆",
+              "expected_reveal_turn": 3,
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "仍在词汇层打转；理想答法=指出这类词都服务于同一个机制问题"
+            },
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/882207c0075345a8a36fb9c88499e152",
+            "session_id": "107",
+            "turn_index": "2",
+            "resolved_query": "Compaction（上下文压缩）和 summarize（总结）是一回事吗？它们有什么区别和联系？",
+            "relation": "COMPARE",
+            "retrieved_paths": [
+              "Reading notes/编程语言中的上下文.md",
+              "Reading notes/Agent Context Engineering 基准.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 1382,
+              "output": 385
+            },
+            "duration_ms": 31843,
+            "message_count": 7,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A11",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A11"
+              ],
+              "other_notes": [
+                "编程语言中的上下文"
+              ],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": 0,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:编程语言中的上下文",
+              "A11"
+            ]
+          },
+          {
+            "turn": 3,
+            "question": "压缩之后，我前面说的话模型还记得吗？",
+            "submit": "submitted",
+            "msgCount": 6,
+            "wait": "answer-shown",
+            "answer": "这一轮我没有做新的检索，回答基于你笔记里已确认的事实加上推断。\n\n## 简短回答\n\n**模型本身不\"记得\"任何东西——它每轮都只能看到当前 context 里有的内容。**\n\n## 依据（来源事实）\n\n[[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]] 明确指出：\n\n- 模型不是直接读取应用的全部状态，而是看到应用为这一轮构造的 context；\n- \"某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\"\n\n## 套到 Compaction 上（推断）\n\n压缩之后你前面说的话会怎样，取决于它**以什么形式留在新的 context 里**：\n\n1. **被摘要覆盖了** → 模型能\"看到\"摘要里保留的要点，但**原文的具体措辞、细节、语气已经丢失**。比如你说过的某个具体数字、某句原话，如果摘要没写进去，模型就当它不存在。\n\n2. **摘要里没提到** → 虽然原始对话可能还存在应用的存储里，但按上面笔记的逻辑，**没注入 context = 模型这一轮用不了**。模型可能会\"忘记\"你明确说过的偏好或约束。\n\n3. **被卸载到外部存储** → 只有当系统之后把它检索回来重新注入，模型才能再次\"看到\"。\n\n## 实际体验上的表现\n\n- **宏观上**：模型通常还能延续话题，因为摘要保留了主干。\n- **微观上**：如果你让模型\"引用我三分钟前说的那句原话\"，压缩之后它很可能做不到，或者凭印象编造一个版本——这就是摘要丢失细节的直接体现。\n\n所以更准确的说法是：**不是模型\"记得或忘记\"，而是你的旧话以压缩后的形式部分存留在 context 中，细节随压缩有损地消失了。**",
+            "gold_latent": {
+              "scenario": "连续性从哪来：模型本身无状态，它记得我 是每轮重新注入 context 制造的错觉；用户隐含假设=模型有持续记忆",
+              "expected_reveal_turn": 3,
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "真实困惑开始浮出（存续 vs 可见）；理想=在此轮就点破机制"
+            },
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/7d3a3c1447fe4118810977dec8c54d43",
+            "session_id": "107",
+            "turn_index": "3",
+            "resolved_query": "在使用 context compaction（压缩/摘要历史对话）为上下文腾出空间之后，模型是否还能记得用户之前说过的内容？压缩后保留的信息与丢失的信息分别是什么？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/编程语言中的上下文.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 1840,
+              "output": 418
+            },
+            "duration_ms": 13709,
+            "message_count": 9,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "编程语言中的上下文"
+              ],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": 0,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "",
+            "actual_action": "REPEAT_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:编程语言中的上下文",
+              "A11"
+            ]
+          },
+          {
+            "turn": 4,
+            "question": "既然每轮都重新构建 context，为什么我感觉它是记得我的？",
+            "submit": "submitted",
+            "msgCount": 8,
+            "wait": "answer-shown",
+            "answer": "这轮检索没有找到笔记里专门讲 Agent 记忆机制的内容（返回的是间隔重复等不相关条目），所以下面基于上一轮笔记事实 + 推断来回答。\n\n## 核心答案\n\n**你的感觉没有错，但\"记得\"的功劳不在模型，而在应用。** 这是一个被工程手段制造出来的\"记忆错觉\"。\n\n## 拆解这个错觉\n\n**来源事实**：[[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]] 指出，每轮调用时应用会构造 context，其中可以包含\"历史对话\"等信息。\n\n**推断**：把这两件事放在一起看——\n\n1. **模型是无状态的**：每次调用之间，模型内部什么都不保留。它没有\"上一轮的我\"。\n2. **但应用是有状态的**：应用把你的历史对话存在自己这边，**每轮调用前都重新把历史拼进 context**。\n3. 于是模型每次\"醒来\"时，眼前都摆着你们的完整（或压缩过的）聊天记录——对它来说，就像第一次读这份记录；对你来说，就像它一直记得。\n\n打个比方（解释，非笔记内容）：模型像一个**每天失忆、但桌上永远摆着完整病历和谈话记录的医生**。他每次见到你都是\"第一次\"，但因为读了记录，说起话来就像认识你很很久。\n\n## 为什么错觉会\"破\"\n\n这也能解释前几轮讨论的现象：\n\n- **压缩丢细节** → 摘要没记的内容，模型就\"忘了\"，错觉破裂；\n- **超出 context window 的早期内容被丢弃** → 对话足够长时，开头的事它会\"忘记\"；\n- **换一个新会话** → 应用不再注入旧历史，它对你\"一无所知\"。\n\n所以你感觉到的\"记忆\"= **持久存储在应用侧的历史 + 每轮忠实的重新注入**，模型只是每轮都从这份材料里临场\"读\"出你是谁。\n\n一句话总结：**记忆住在应用里，模型只是每轮都被重新\"告知\"一次。**",
+            "gold_latent": {
+              "scenario": "连续性从哪来：模型本身无状态，它记得我 是每轮重新注入 context 制造的错觉；用户隐含假设=模型有持续记忆",
+              "expected_reveal_turn": 3,
+              "judge": [
+                "latent_question_hit",
+                "misconception_detection"
+              ],
+              "judge_note": "必须点名错觉机制（每轮重新注入制造连续性）并指出用户的隐含假设"
+            },
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/d297b855c009efe12222e9e7d82d9d6b",
+            "session_id": "107",
+            "turn_index": "4",
+            "resolved_query": "既然模型每一轮都重新构建 context、本身并不记住任何内容，为什么用户在对话中仍然感觉模型记得自己之前说过的话？这种\"记得\"的感觉是如何通过每轮重新注入 context（如对话历史、摘要）实现的？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/笔记方法对比.md",
+              "Reading notes/间隔重复.md",
+              "Reading notes/编程语言中的上下文.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 5042,
+              "output": 605
+            },
+            "duration_ms": 21388,
+            "message_count": 13,
+            "metrics": {
+              "k": 4,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:间隔重复",
+                "OTHER:编程语言中的上下文",
+                "OTHER:笔记方法对比"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "间隔重复",
+                "编程语言中的上下文",
+                "笔记方法对比"
+              ],
+              "recall": 0.5,
+              "hnr": null,
+              "mrr": 1,
+              "ndcg": 0.7871546029909718,
+              "precision": 0.25,
+              "noise_ratio": 0.75
+            },
+            "evidence": "Source: [[Reading notes/间隔重复.md#核心原理|间隔重复 › 核心原理]]\nIdentity: personal_knowledge\nEpistemic status: confirmed_by_user\n## 核心原理\n\n记忆痕迹会随着时间消退，而且消退速度是先快后慢。间隔重复的原理就是在记忆即将消退的时间点附近安排复习，每次成功的提取都会让记忆痕迹维持更久。\n\n---\n\nSource: [[Reading notes/编程语言中的上下文.md#上下文无关文法|编程语言中的上下文 › 上下文无关文法]]\nIdentity: unknown\nEpistemic status: unverified\n## 上下文无关文法\n\n上下文无关文法（CFG）是形式语言理论中的概念：一条产生式规则无论被什么符号包围都适用，与\"上下文\"无关。编程语言的语法大多用 CFG 描述，例如表达式规则 `expr → expr + term`。",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:编程语言中的上下文",
+              "A11",
+              "OTHER:间隔重复",
+              "OTHER:笔记方法对比"
+            ]
+          }
+        ]
+      },
+      {
+        "scenario_id": "L2",
+        "topic": "无状态假设（为什么不能放一次就一直在）",
+        "turns": [
+          {
+            "turn": 1,
+            "question": "笔记里说的 tool definition 是什么？",
+            "submit": "submitted",
+            "msgCount": 2,
+            "wait": "answer-shown",
+            "answer": "根据你笔记里的内容，**tool definition（工具定义）是构造模型输入上下文（context）时可能注入的一种信息**。\n\n## 笔记中明确说的（来源事实）\n\n在 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]] 中：\n\n> \"这个上下文可能包含系统指令、应用指令、用户消息、历史对话、**工具定义**、检索结果以及其他运行时信息。\"\n\n所以按照笔记的说法，tool definition 是在每一次模型调用时，由应用或 Agent Runtime 构造并注入 context 的输入成分之一——和系统指令、用户消息等并列。\n\n## 我基于笔记做的解释（帮你理解，不是笔记原文）\n\n\"工具定义\"通常指：告诉模型\"你有哪些工具可用、每个工具叫什么、接受什么参数\"的那段描述。例如告诉模型有一个搜索工具、参数是查询字符串。模型只有看到工具定义，才知道自己可以\"调用\"什么。\n\n## 笔记没有覆盖的部分\n\n你的笔记在这段只把 tool definition 列为 context 的组成部分之一，**没有展开说**：\n- tool definition 的具体格式是什么样的\n- 它是一次性注入还是每轮都注入\n- 它和 tool result 的关系细节\n\n如果你想弄清这些，目前的笔记证据不足，我不想替你编内容。要不要我再去笔记里查一下是否有专门讲 tool definition 的条目？",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/493367437362ce20c191de0fcef1882b",
+            "session_id": "108",
+            "turn_index": "1",
+            "resolved_query": "笔记里说的 tool definition 是什么？",
+            "relation": "NEW_TOPIC",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/笔记方法对比.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 1040,
+              "output": 353
+            },
+            "duration_ms": 11638,
+            "message_count": 5,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:笔记方法对比"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "笔记方法对比"
+              ],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": 0,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:笔记方法对比"
+            ]
+          },
+          {
+            "turn": 2,
+            "question": "它每次调用都要重新放进去吗？",
+            "submit": "submitted",
+            "msgCount": 4,
+            "wait": "answer-shown",
+            "answer": "我去笔记里又查了一次，**没有专门讲\"tool definition 是否每轮重新注入\"的条目**。所以下面要分清：哪部分是笔记能支撑的，哪部分是我从笔记原理推出来的。\n\n## 笔记中能直接支撑的原则（来源事实）\n\n来自 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]：\n\n> \"一次模型调用时……由应用或 Agent Runtime **为这一轮调用构造**一个输入上下文\"\n>\n> \"某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\"\n\n## 由此推出的答案（我的推断，不是笔记原文）\n\n按照这条原则，**是的——如果模型这一轮需要使用工具，工具定义就必须在这一轮的 context 里重新放进去**。因为：\n\n- 上下文是为每一次调用单独构造的（笔记原文）；\n- 工具定义只是 context 的组成成分之一，模型没有\"上一次看到过\"的记忆；\n- 上一轮注入过、这一轮没注入，模型就当它不存在（笔记原文的推论）。\n\n这和你之前问的\"每轮都重新构建 context，为什么它像记得我\"是同一个道理：不是模型记得，而是应用每轮把必要的东西重新打包送进去。\n\n## 笔记没覆盖的边界\n\n笔记没有说实际系统里工具定义是\"每轮原样重发\"还是有缓存/省略等优化策略——这属于实现细节，你的笔记目前没写，我不替你猜。\n\n一个帮你巩固理解的小问题：如果某一轮调用只是闲聊、不需要用任何工具，你觉得应用还会把工具定义放进 context 吗？（提示：想想你选中的那句话——\"小而相关的检索胜过大量噪声\"。）",
+            "gold_latent": {
+              "scenario": "模型=有状态容器的隐含假设；实际是无状态函数 + 每轮重构输入",
+              "expected_reveal_turn": 2,
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "理想：此轮就点破无状态+每轮重构，而不是只回答是"
+            },
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/f4cf4b099374c0f8b86f5b226829884c",
+            "session_id": "108",
+            "turn_index": "2",
+            "resolved_query": "笔记中说的 tool definition（工具定义）是否需要在每次调用模型时都重新注入到 context 中？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/笔记方法对比.md",
+              "Reading notes/编程语言中的上下文.md",
+              "Reading notes/间隔重复.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 3207,
+              "output": 648
+            },
+            "duration_ms": 108272,
+            "message_count": 9,
+            "metrics": {
+              "k": 4,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:编程语言中的上下文",
+                "OTHER:间隔重复",
+                "OTHER:笔记方法对比"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "编程语言中的上下文",
+                "间隔重复",
+                "笔记方法对比"
+              ],
+              "recall": 0.5,
+              "hnr": null,
+              "mrr": 1,
+              "ndcg": 0.7871546029909718,
+              "precision": 0.25,
+              "noise_ratio": 0.75
+            },
+            "evidence": "Source: [[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]]\nIdentity: unknown\nEpistemic status: unverified\n## 执行上下文\n\n运行时语境里，执行上下文指函数调用时保存局部变量和返回地址的环境，例如 JavaScript 的调用栈帧。每个栈帧就是一层执行上下文。\n\n---\n\nSource: [[Reading notes/间隔重复.md#核心原理|间隔重复 › 核心原理]]\nIdentity: personal_knowledge\nEpistemic status: confirmed_by_user\n## 核心原理\n\n记忆痕迹会随着时间消退，而且消退速度是先快后慢。间隔重复的原理就是在记忆即将消退的时间点附近安排复习，每次成功的提取都会让记忆痕迹维持更久。",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:笔记方法对比",
+              "OTHER:编程语言中的上下文",
+              "OTHER:间隔重复"
+            ]
+          },
+          {
+            "turn": 3,
+            "question": "为什么不能放一次就一直在那儿？",
+            "submit": "submitted",
+            "msgCount": 6,
+            "wait": "answer-shown",
+            "answer": "这次检索还是只返回了那条 A01 笔记，所以我还是用它来做依据，先把来源和推断分清楚。\n\n## 笔记直接说的（来源事实）\n\n[[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]] 里有两个关键句：\n\n> \"一次模型调用时，模型并不是直接读取应用的全部状态，而是由应用或 Agent Runtime **为这一轮调用构造**一个输入上下文。\"\n>\n> \"某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\"\n\n注意这里藏着一个前提：**模型自己没有\"上一轮的 context\"**。每次调用是独立的一次输入 → 输出，调用结束后那一份 context 对模型来说就不存在了。\n\n## 我的解释（笔记没明说，是从上面原则推的）\n\n你问的\"放一次就一直在那儿\"，其实隐含假设了模型有个地方能\"存住\"东西。但从笔记的逻辑看：\n\n- 模型能\"看到\"的唯一东西 = 这一次调用被构造出来的 context；\n- 上一次调用的 context 并不是\"留在模型里\"，它随着那次调用结束了；\n- 所以所谓\"一直在那儿\"，在模型侧根本没有\"那儿\"——没有持久的存放位置。\n\n唯一的办法是：**由应用每轮重新把它拼进新的 context**。从模型视角看，\"记住了\"其实是\"每次都被重新告诉了\"。\n\n这也正好回答了你最早的那个问题——\"为什么感觉它记得我\"：不是它记得，是应用每次都把历史重新注入。\n\n## 笔记没覆盖的\n\n笔记没讲模型内部是否真的一点状态都不留（比如缓存机制等工程优化），也没讲 context 长度限制这类问题。如果你想知道\"既然每轮都重放，会不会放不下\"，笔记里目前没有证据，需要另查。\n\n反过来考你一下：既然模型没有跨调用的记忆，你觉得\"工具定义\"\"历史对话\"\"系统指令\"这几样东西，谁负责每轮把它们重新装进去？",
+            "gold_latent": {
+              "scenario": "模型=有状态容器的隐含假设；实际是无状态函数 + 每轮重构输入",
+              "expected_reveal_turn": 2,
+              "judge": [
+                "latent_question_hit",
+                "misconception_detection"
+              ],
+              "judge_note": "必须重构出用户的容器心智模型并纠正"
+            },
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/1b903e71a861abacabffeb7668b1cd69",
+            "session_id": "108",
+            "turn_index": "3",
+            "resolved_query": "为什么工具定义（tool definition）不能只在 context 里放一次就一直保留，而必须在每次模型调用时重新注入？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/编程语言中的上下文.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 1871,
+              "output": 536
+            },
+            "duration_ms": 10275,
+            "message_count": 9,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:编程语言中的上下文"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "编程语言中的上下文"
+              ],
+              "recall": 1,
+              "hnr": null,
+              "mrr": 1,
+              "ndcg": 1,
+              "precision": 0.5,
+              "noise_ratio": 0.5
+            },
+            "evidence": "",
+            "actual_action": "REPEAT_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:笔记方法对比",
+              "OTHER:编程语言中的上下文",
+              "OTHER:间隔重复"
+            ]
+          }
+        ]
+      },
+      {
+        "scenario_id": "L3",
+        "topic": "信息存续的实用规则（连续表面探测后问做法）",
+        "turns": [
+          {
+            "turn": 1,
+            "question": "笔记里说的 instruction 是什么？",
+            "submit": "submitted",
+            "msgCount": 2,
+            "wait": "answer-shown",
+            "answer": "好问题——不过先说清楚：这次检索到的笔记里，并没有一节专门定义 \"instruction\" 这个术语。我能找到的最直接的依据来自 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]：\n\n**笔记里明确说的（源事实）：**\n\n> 一次模型调用时……由应用或 Agent Runtime 为这一轮调用构造一个输入上下文。这个上下文可能包含**系统指令**、**应用指令**、用户消息、历史对话、工具定义、检索结果以及其他运行时信息。\n\n也就是说，在这份笔记的框架里，\"指令\"（instruction）以两种形式出现：\n\n1. **系统指令（system instruction）** — 通常指给模型的底层行为约束\n2. **应用指令（app instruction）** — 应用层面对模型角色的具体要求\n\n它们的共同点：**都是 context 的组成部分**，即每次模型调用时被注入输入上下文的信息。\n\n**结合笔记逻辑可以推出的（我的推断，非笔记原文）：**\n\n既然笔记强调\"某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用\"，那么 instruction 也遵循同样规则——它必须存在于这一轮的 context 里，模型才能\"看到\"并遵守它。这和你之前问的 tool definition、context window 是同一条主线：工具定义、指令、历史对话，都在争夺同一个有限的 context window。\n\n**笔记没覆盖的部分：**\n\n- 笔记没有解释系统指令和应用指令的具体区别、优先级或格式（比如 system prompt 的写法）\n- 也没有说指令是否可以被压缩或丢弃（虽然按 [[Reading notes/Agent Context Engineering 基准.md|A14 Conversation Compaction]] 的思路，压缩时指令通常应保留，但这属于合理推断）\n\n如果你想让我查笔记里有没有更多关于 system prompt / 指令设计的细节，可以告诉我。",
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/ea7006c774069a5ded7a2987f049e1bf",
+            "session_id": "109",
+            "turn_index": "1",
+            "resolved_query": "笔记里说的 instruction 是什么？",
+            "relation": "NEW_TOPIC",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/笔记方法对比.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 1031,
+              "output": 546
+            },
+            "duration_ms": 15892,
+            "message_count": 5,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A01",
+                "OTHER:笔记方法对比"
+              ],
+              "bench_chunks": [
+                "A01"
+              ],
+              "other_notes": [
+                "笔记方法对比"
+              ],
+              "recall": 0,
+              "hnr": null,
+              "mrr": 0,
+              "ndcg": 0,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": true,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              },
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": null,
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:笔记方法对比"
+            ]
+          },
+          {
+            "turn": 2,
+            "question": "它会不会也被压缩掉？",
+            "submit": "submitted",
+            "msgCount": 4,
+            "wait": "answer-shown",
+            "answer": "查到了相关内容，来自 [[Reading notes/Agent Context Engineering 基准.md#A04 Conversation History 与 Compaction|Agent Context Engineering 基准 › A04 Conversation History 与 Compaction]]。\n\n**笔记里明确说的（源事实）：**\n\n> 一种办法是对较早的 **conversation history** 进行压缩，把部分历史转换为摘要或者结构化状态，只保留当前任务最需要的信息。\n\n注意这里的措辞：压缩的对象是\"较早的 **conversation history**（对话历史）\"——也就是你和模型之间来往的那些消息。笔记没有把系统指令、应用指令列为压缩对象。\n\n**结合 A01 可以推出的（我的推断，非笔记原文）：**\n\n回到 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|A01]] 的框架，context 由多个部分组成：系统指令、应用指令、用户消息、历史对话、工具定义、检索结果等。压缩机制针对的是其中\"历史对话\"这一类会无限增长的部分。指令本身是**每一轮调用由应用/Runtime 注入的**，它不随对话变长而膨胀，所以通常没有理由去压缩它——每轮重新注入即可。\n\n**但有一个诚实的边界要说清：**\n\n笔记只描述了\"压缩对话历史\"这一种机制，**没有明确保证指令永远不会被压缩或丢弃**。理论上一个压缩实现如果设计不当，也可能波及指令——但这就超出笔记覆盖的范围了。笔记能支持的结论是：\n\n- ✅ 压缩的**目标对象**是对话历史，不是指令\n- ✅ 压缩的目的是\"保留当前任务需要的信息\"，而指令显然属于当前任务需要的信息\n- ⚠️ 笔记没有逐条列出\"哪些内容保证不动\"\n\n所以简短回答你的问题：**按笔记的描述，不会**——压缩打的是历史对话的主意，指令是每轮由应用方重新注入 context 的，不在压缩范围内。",
+            "gold_latent": {
+              "scenario": "用户在拼凑什么决定信息在模型眼里的存续 的规则；真正需要的是统一原理（可见性=本轮被注入）",
+              "expected_reveal_turn": 3,
+              "judge": [
+                "latent_question_hit"
+              ],
+              "judge_note": "链路中的弃答：文章没说 instruction 是否参与 compaction，须明说，同时这正是用户困惑的证据"
+            },
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/f87d6e74539cb10b8eafd4eef118f54b",
+            "session_id": "109",
+            "turn_index": "2",
+            "resolved_query": "笔记里说的 instruction 是什么？ 它会不会也被压缩掉？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/笔记方法对比.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 3440,
+              "output": 608
+            },
+            "duration_ms": 16651,
+            "message_count": 9,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A04",
+                "OTHER:笔记方法对比"
+              ],
+              "bench_chunks": [
+                "A04"
+              ],
+              "other_notes": [
+                "笔记方法对比"
+              ],
+              "recall": null,
+              "hnr": 0.5,
+              "mrr": null,
+              "ndcg": null,
+              "precision": 0,
+              "noise_ratio": 1
+            },
+            "evidence": "Source: [[Reading notes/Agent Context Engineering 基准.md#A04 Conversation History 与 Compaction|Agent Context Engineering 基准 › A04 Conversation History 与 Compaction]]\nIdentity: unknown\nEpistemic status: unverified\n## A04 Conversation History 与 Compaction\n\n连续对话越来越长以后，不一定需要永远把过去每一句话原样加入下一轮模型调用。\n\n一种办法是对较早的 conversation history 进行压缩，把部分历史转换为摘要或者结构化状态，只保留当前任务最需要的信息。\n\n这种处理可以降低 context 消耗，但同时可能损失细节。\n\n因此，compaction 的目标是保留当前任务需要的信息，而不是完整保存所有历史文字。",
+            "actual_action": "INCREMENTAL_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A04 Conversation History 与 Compaction",
+                "ok": true,
+                "reason": ""
+              },
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "abstain_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:笔记方法对比",
+              "A04"
+            ]
+          },
+          {
+            "turn": 3,
+            "question": "那我是不是应该把最重要的要求写在每轮都看得到的地方？",
+            "submit": "submitted",
+            "msgCount": 6,
+            "wait": "answer-shown",
+            "answer": "这是个很好的推理——让我帮你把它和笔记对上，分清哪些是笔记说的、哪些是你自己推出来的（推得对不对）。\n\n**笔记支持的依据（源事实）：**\n\n1. 来自 [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|A01]]：\n   > 某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n\n2. 来自 [[Reading notes/Agent Context Engineering 基准.md#A04 Conversation History 与 Compaction|A04]]：\n   > 这种处理可以降低 context 消耗，但同时**可能损失细节**。因此，compaction 的目标是保留当前任务需要的信息，而不是完整保存所有历史文字。\n\n**把这两点拼起来，你的结论确实成立（这是我的推断）：**\n\n- 写在**对话历史**里的重要要求 → 有被压缩、损失细节的风险\n- 写在**指令**（系统指令/应用指令）里的要求 → 由应用每轮重新注入，不依赖历史保存\n- 所以：**最重要的要求应该放在每轮都被注入的地方（指令层），而不是指望模型\"记得\"你几轮前说过的话**\n\n**两个补充提醒（同样是推断）：**\n\n1. **不是越多越好。** 回到你最初选的那段话：\"retrieval quality matters more than retrieval volume\"。指令也占 context window，把所有要求都塞进指令会稀释真正重要的内容。原则是：*关键的、跨轮都要生效的*放指令；*只在当前任务相关的*放消息里。\n\n2. **现实中的一个折中：** 很多人不知道的是，一些应用会在对话中把重要要求\"提升\"为结构化状态（类似 A04 说的\"结构化状态\"），每轮重新注入——这本质上就是你想做的事的工程化版本。\n\n所以你的直觉方向是对的：**默认历史不可靠，重要约束要每轮可见。** 这正是 context engineering 的核心思路之一。",
+            "gold_latent": {
+              "scenario": "用户在拼凑什么决定信息在模型眼里的存续 的规则；真正需要的是统一原理（可见性=本轮被注入）",
+              "expected_reveal_turn": 3,
+              "judge": [
+                "latent_question_hit",
+                "conceptual_positioning"
+              ],
+              "judge_note": "理想：给出统一原理+承认文章没写具体做法+建议标注为推断；把三轮表面问题串成一条线"
+            },
+            "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/dd59f898f3c2cfa78d0a42e801095b8c",
+            "session_id": "109",
+            "turn_index": "3",
+            "resolved_query": "既然对话历史可能被压缩，我是不是应该把最重要的要求（如关键指令和约束）写在每一轮对话中都能看到、不会被压缩的地方（例如系统指令或持久化的上下文区域），以保证它们始终生效？",
+            "relation": "CONTINUE",
+            "retrieved_paths": [
+              "Reading notes/Agent Context Engineering 基准.md",
+              "Reading notes/笔记方法对比.md"
+            ],
+            "web_source_count": 0,
+            "tokens": {
+              "input": 2082,
+              "output": 504
+            },
+            "duration_ms": 14921,
+            "message_count": 9,
+            "metrics": {
+              "k": 2,
+              "retrieved_chunks": [
+                "A04",
+                "OTHER:笔记方法对比"
+              ],
+              "bench_chunks": [
+                "A04"
+              ],
+              "other_notes": [
+                "笔记方法对比"
+              ],
+              "recall": 0.3333333333333333,
+              "hnr": null,
+              "mrr": 1,
+              "ndcg": 0.6131471927654584,
+              "precision": 0.5,
+              "noise_ratio": 0.5
+            },
+            "evidence": "",
+            "actual_action": "REPEAT_RETRIEVAL",
+            "action_ok": false,
+            "citations": [
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A01 Context 是什么",
+                "ok": true,
+                "reason": ""
+              },
+              {
+                "path": "Reading notes/Agent Context Engineering 基准.md",
+                "heading": "A04 Conversation History 与 Compaction",
+                "ok": true,
+                "reason": ""
+              }
+            ],
+            "citation_ok": true,
+            "prior_chunks": [
+              "A01",
+              "OTHER:笔记方法对比",
+              "A04"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "turns_total": 10,
+    "turns_answered": 10,
+    "action_accuracy": 0.5,
+    "action_scored_n": 10,
+    "routing_action_current": null,
+    "routing_action_ideal": null,
+    "recall": 0.2592592592592593,
+    "recall_n": 9,
+    "ndcg": 0.3541618220830447,
+    "ndcg_n": 9,
+    "mrr": 0.4444444444444444,
+    "precision": 0.16666666666666666,
+    "noise_ratio": 0.8333333333333334,
+    "citation_verifiability": 1,
+    "citation_n": 10,
+    "citation_failures": [],
+    "abstention": 1,
+    "abstention_n": 1,
+    "freshness_trigger": 0,
+    "freshness_n": 0
+  }
+}

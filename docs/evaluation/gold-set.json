@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "created": "2026-09-20",
+  "purpose": "T1 检索评测 gold set：验证两阶段词法检索在同义改写下的召回能力",
+  "vault_root": "docs/evaluation/vault",
+  "criteria": {
+    "hit_definition": "工具口径 search(query, limit=3) 返回的文件列表中 gold 文件存在，且对其执行 read 后 scorePassage 选中的 Top 段落 heading 等于 gold heading。文件在 Top-N 但段落选错记为 miss。",
+    "synonym_rewrite": "问题不点破 gold 段落的核心术语，用日常措辞描述同一概念",
+    "decision_rule": "同义改写子集命中率 < 60% → 对授权 Scope 启动增量 embedding；≥ 60% → 词法保留，只调 lane 配额"
+  },
+  "questions": [
+    { "id": "q01", "type": "concept", "synonym_rewrite": false, "question": "间隔重复的原理是什么", "expected": { "path": "learning/间隔重复.md", "heading": "核心原理" } },
+    { "id": "q02", "type": "concept", "synonym_rewrite": false, "question": "什么是主动回忆", "expected": { "path": "learning/主动回忆.md", "heading": "概念" } },
+    { "id": "q03", "type": "concept", "synonym_rewrite": false, "question": "刻意练习是什么", "expected": { "path": "learning/刻意练习.md", "heading": "定义" } },
+    { "id": "q04", "type": "concept", "synonym_rewrite": false, "question": "睡眠周期是怎么组成的", "expected": { "path": "health/睡眠周期.md", "heading": "什么是睡眠周期" } },
+    { "id": "q05", "type": "concept", "synonym_rewrite": false, "question": "咖啡因提神的原理是什么", "expected": { "path": "health/咖啡因.md", "heading": "作用机制" } },
+    { "id": "q06", "type": "concept", "synonym_rewrite": true, "question": "为什么背过的东西过两天就忘", "expected": { "path": "learning/间隔重复.md", "heading": "核心原理" } },
+    { "id": "q07", "type": "concept", "synonym_rewrite": true, "question": "看书都觉得懂了合上书写不出来是怎么回事", "expected": { "path": "learning/主动回忆.md", "heading": "概念" } },
+    { "id": "q08", "type": "concept", "synonym_rewrite": true, "question": "运动后第二天肌肉酸痛是什么原因", "expected": { "path": "health/运动恢复.md", "heading": "延迟性酸痛" } },
+
+    { "id": "q09", "type": "howto", "synonym_rewrite": false, "question": "费曼学习法的具体步骤是什么", "expected": { "path": "learning/费曼学习法.md", "heading": "操作步骤" } },
+    { "id": "q10", "type": "howto", "synonym_rewrite": false, "question": "间隔重复的节奏怎么安排", "expected": { "path": "learning/间隔重复.md", "heading": "安排节奏" } },
+    { "id": "q11", "type": "howto", "synonym_rewrite": false, "question": "批量重命名文件用什么命令", "expected": { "path": "coding/shell技巧.md", "heading": "批量重命名" } },
+    { "id": "q12", "type": "howto", "synonym_rewrite": false, "question": "匹配邮箱的正则怎么写", "expected": { "path": "coding/正则表达式.md", "heading": "常用模式" } },
+    { "id": "q13", "type": "howto", "synonym_rewrite": true, "question": "想提神的话咖啡什么时候喝比较好", "expected": { "path": "health/咖啡因.md", "heading": "摄入时机" } },
+    { "id": "q14", "type": "howto", "synonym_rewrite": true, "question": "练完腿很酸怎么快点恢复", "expected": { "path": "health/运动恢复.md", "heading": "延迟性酸痛" } },
+    { "id": "q15", "type": "howto", "synonym_rewrite": true, "question": "本地改了很多提交想整理干净再推上去怎么办", "expected": { "path": "coding/git分支策略.md", "heading": "rebase 与 merge" } },
+    { "id": "q16", "type": "howto", "synonym_rewrite": true, "question": "新手学正则最容易踩什么坑", "expected": { "path": "coding/正则表达式.md", "heading": "性能陷阱" } },
+
+    { "id": "q17", "type": "comparison", "synonym_rewrite": false, "question": "Anki 和 SuperMemo 的算法有什么区别", "expected": { "path": "learning/间隔重复.md", "heading": "工具对比" } },
+    { "id": "q18", "type": "comparison", "synonym_rewrite": false, "question": "merge 和 rebase 的区别是什么", "expected": { "path": "coding/git分支策略.md", "heading": "rebase 与 merge" } },
+    { "id": "q19", "type": "comparison", "synonym_rewrite": false, "question": "刻意练习和机械重复差在哪", "expected": { "path": "learning/刻意练习.md", "heading": "与机械重复的区别" } },
+    { "id": "q20", "type": "comparison", "synonym_rewrite": true, "question": "都说多练就行，什么样的练习才算有效", "expected": { "path": "learning/刻意练习.md", "heading": "与机械重复的区别" } },
+    { "id": "q21", "type": "comparison", "synonym_rewrite": true, "question": "提交历史拉直和保留分叉各有什么好处", "expected": { "path": "coding/git分支策略.md", "heading": "rebase 与 merge" } },
+
+    { "id": "q22", "type": "lookup", "synonym_rewrite": false, "question": "每个睡眠周期大约多久的原文在哪", "expected": { "path": "health/睡眠周期.md", "heading": "周期时长" } },
+    { "id": "q23", "type": "lookup", "synonym_rewrite": false, "question": "艾宾浩斯实验里 1 天后还记得多少比例", "expected": { "path": "learning/艾宾浩斯遗忘曲线.md", "heading": "曲线规律" } },
+    { "id": "q24", "type": "lookup", "synonym_rewrite": false, "question": "咖啡因的半衰期是几小时", "expected": { "path": "health/咖啡因.md", "heading": "摄入时机" } },
+    { "id": "q25", "type": "lookup", "synonym_rewrite": false, "question": "同一肌群两次力量训练之间至少隔多久", "expected": { "path": "health/运动恢复.md", "heading": "训练安排" } },
+    { "id": "q26", "type": "lookup", "synonym_rewrite": true, "question": "不看书凭记忆默写要点算哪种学习方式", "expected": { "path": "learning/主动回忆.md", "heading": "常见方式" } },
+
+    { "id": "q27", "type": "concept", "synonym_rewrite": true, "question": "读过的书记不住内容怎么办", "expected": { "path": "learning/主动回忆.md", "heading": "常见方式" } },
+    { "id": "q28", "type": "concept", "synonym_rewrite": true, "question": "记一串没有规律的清单有什么好办法", "expected": { "path": "clips/记忆宫殿.md", "heading": "步骤" } },
+    { "id": "q29", "type": "howto", "synonym_rewrite": false, "question": "记忆宫殿怎么用", "expected": { "path": "clips/记忆宫殿.md", "heading": "步骤" } },
+    { "id": "q30", "type": "concept", "synonym_rewrite": true, "question": "工作总是分心有什么时间管理办法", "expected": { "path": "clips/番茄工作法.md", "heading": "基本流程" } }
+  ]
+}

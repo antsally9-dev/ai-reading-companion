@@ -1,0 +1,45 @@
+{
+  "startedAt": "2026-10-08T04:20:09.162Z",
+  "model": "kimi-k3",
+  "suites": {
+    "core": [
+      {
+        "case_id": "S07",
+        "question": "帮我查找笔记：如果最相关的片段只能回答问题的一半，还应该坚持只用它吗？",
+        "tags": [
+          "core",
+          "sufficiency"
+        ],
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "timeout",
+        "answer": "",
+        "error": "timeout"
+      }
+    ]
+  },
+  "summary": {
+    "turns_total": 0,
+    "turns_answered": 0,
+    "action_accuracy": null,
+    "action_scored_n": 0,
+    "routing_action_current": null,
+    "routing_action_ideal": null,
+    "recall": null,
+    "recall_n": 0,
+    "ndcg": null,
+    "ndcg_n": 0,
+    "mrr": null,
+    "precision": null,
+    "noise_ratio": null,
+    "citation_verifiability": null,
+    "citation_n": 0,
+    "citation_failures": [],
+    "abstention": null,
+    "abstention_n": 0,
+    "freshness_trigger": 0,
+    "freshness_n": 0,
+    "trap_resistance": null,
+    "trap_n": 0
+  }
+}

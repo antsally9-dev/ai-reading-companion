@@ -1,0 +1,309 @@
+{
+  "startedAt": "2026-10-07T17:10:57.988Z",
+  "model": "kimi-k3",
+  "suites": {
+    "core": [
+      {
+        "case_id": "S01",
+        "question": "帮我查找笔记：模型决定要不要调用工具的时候，已经能看到工具执行结果了吗？",
+        "tags": [
+          "quote-trap",
+          "direct-retrieval",
+          "core"
+        ],
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "根据这次检索到的笔记，答案是：**不能**。\n\n**来源事实**（来自 [[Reading notes/Agent Context Engineering 基准.md#A08 Relevant 不等于 Useful|Agent Context Engineering 基准 › A08 Relevant 不等于 Useful]]）：\n\n- 笔记里正好用这个问题做了例子，并指出真正回答问题的片段是 **\"Tool results are produced only after execution\"**（工具结果只在执行之后产生）。\n- 也就是说，在时间顺序上，「模型决定要不要调用工具」发生在前，「工具产生执行结果」发生在后——做决定的那一刻，结果还不存在，自然不可能在上下文里看到。\n\n**基于笔记的解释**：\n\n- 这正体现了笔记强调的区分：topic relevance（话题相关）≠ answer utility（能回答问题）。比如 \"Tools allow agents to interact with external systems\" 这句话虽然和「工具」主题相关，但对回答你的问题没有用；而 \"Tool results are produced only after execution\" 才是关键证据。\n\n**一点推断**（笔记未明说，是我基于上述事实的推论）：\n\n- 工具执行结果只能在该次模型调用结束后被附加到 context 中，在下一次调用模型时才会被「看到」——这也和你之前问过的「Agent 每次调用模型时 context 是重新构建的」这个问题逻辑上衔接得上。不过这条属于推论，本次检索的笔记没有直接这么表述。\n\n如果你还想确认「结果具体是如何在下一次调用时注入 context 的」，我可以再针对这个点检索一次。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/985f18be3844fe6abe63b824ba64d720",
+        "session_id": "130",
+        "turn_index": "1",
+        "resolved_query": "模型决定要不要调用工具的时候，已经能看到工具执行结果了吗？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/编程语言中的上下文.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 2393,
+          "output": 615
+        },
+        "duration_ms": 24274,
+        "message_count": 7,
+        "metrics": {
+          "k": 2,
+          "retrieved_chunks": [
+            "A08",
+            "OTHER:编程语言中的上下文"
+          ],
+          "bench_chunks": [
+            "A08"
+          ],
+          "other_notes": [
+            "编程语言中的上下文"
+          ],
+          "recall": 0,
+          "hnr": null,
+          "mrr": 0,
+          "ndcg": 0,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "The requested local passages were already supplied earlier in this run, or the shared local evidence character budget has been reached. Reuse the existing evidence.",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": true,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A08 Relevant 不等于 Useful",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true
+      },
+      {
+        "case_id": "S02",
+        "question": "帮我查找笔记：聊得越来越久以后，是不是之前每句话都会原封不动塞进下一次调用？",
+        "tags": [
+          "semantic-paraphrase",
+          "quote-trap",
+          "core"
+        ],
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "查到了相关笔记。结论是：**不一定。聊得越来越久，并不意味着之前的每句话都会原封不动进入下一次模型调用。**\n\n### 笔记依据\n\n- 每次调用时，模型看到的 context 是由应用或 Agent Runtime 临时构造的，**可能包含历史对话、检索结果等内容**，但它不等于系统保存的全部信息。某项历史内容即使仍存储在应用里，如果这一轮没有被注入 context，模型也不能直接使用。[[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]\n- 你这个问题被笔记明确归为 **compaction** 的典型疑问，并指向“压缩与裁剪”的讨论。[[Reading notes/Agent Context Engineering 基准.md#A15 常见问题示例|Agent Context Engineering 基准 › A15 常见问题示例]]\n- 另一处笔记还以 “older messages can be summarized when context becomes long” 为例，说明上下文变长后，**旧消息可能会被总结**，而不是逐字保留。[[Reading notes/Agent Context Engineering 基准.md#A07 Semantic Retrieval|Agent Context Engineering 基准 › A07 Semantic Retrieval]]\n\n### 我的理解\n\n更准确地说：\n\n> 应用可能保存着完整聊天记录，但每次调用只会把其中一部分历史内容放进模型上下文；这部分内容可能是原文，也可能经过摘要、压缩或裁剪。\n\n所以，**“系统还存着”不等于“模型这一轮都逐字看见了”**。\n\n不过，这次检索没有返回关于具体压缩算法、触发阈值或保留策略的段落，因此不能从当前证据判断“聊多少轮后会开始摘要”或“具体哪些句子会被保留”。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/0f71ac56972e25f3d4cb079b92ab1b1a",
+        "session_id": "131",
+        "turn_index": "1",
+        "resolved_query": "聊得越来越久以后，是不是之前每句话都会原封不动塞进下一次调用？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/间隔重复.md",
+          "Reading notes/编程语言中的上下文.md",
+          "Reading notes/笔记方法对比.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 4742,
+          "output": 1613
+        },
+        "duration_ms": 49947,
+        "message_count": 9,
+        "metrics": {
+          "k": 5,
+          "retrieved_chunks": [
+            "A15",
+            "A01",
+            "OTHER:编程语言中的上下文",
+            "OTHER:笔记方法对比",
+            "OTHER:间隔重复"
+          ],
+          "bench_chunks": [
+            "A15",
+            "A01"
+          ],
+          "other_notes": [
+            "编程语言中的上下文",
+            "笔记方法对比",
+            "间隔重复"
+          ],
+          "recall": 0,
+          "hnr": 0.2,
+          "mrr": 0,
+          "ndcg": 0.11245065757013882,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "Source: [[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]]\nIdentity: unknown\nEpistemic status: unverified\n## 执行上下文\n\n运行时语境里，执行上下文指函数调用时保存局部变量和返回地址的环境，例如 JavaScript 的调用栈帧。每个栈帧就是一层执行上下文。\n\n---\n\nSource: [[Reading notes/Agent Context Engineering 基准.md#A15 常见问题示例|Agent Context Engineering 基准 › A15 常见问题示例]]\nIdentity: unknown\nEpistemic status: unverified\n## A15 常见问题示例\n\n读者在阅读本章时经常提出这样一些问题，收录于此供参考：\n\n有读者问\"帮我查找笔记：聊得越来越久以后，是不是之前每句话都会原封不动塞进下一次调用？\"——这属于对 compaction 的典型疑问，可参见前文关于压缩与裁剪的讨论。\n\n也有读者问\"选中的内容太少，会不会影响回答质量？\"——这类问题需要结合选区作为 anchor 的定位与最小充分证据的原则来理解。\n\n还有读者问\"笔记里有没有讲 caching 对上下文的影响？\"——本文未覆盖 caching，这属于超出本文范围的问题。\n---\nSource: [[Reading notes/Agent Context Engineering 基准.md#A01 Context 是什么|Agent Context Engineering 基准 › A01 Context 是什么]]\nIdentity: unknown\nEpistemic status: unverified\n## A01 Context 是什么\n\n一次模型调用时，模型并不是直接读取应用的全部状态，而是由应用或 Agent Runtime 为这一轮调用构造一个输入上下文。这个上下文可能包含系统指令、应用指令、用户消息、历史对话、工具定义、检索结果以及其他运行时信息。\n\n因此，模型当前看到的 context 不等于系统拥有的全部信息。某项信息即使存储在应用中，如果这一轮没有被重新注入 context，模型仍然无法直接使用。\n\n---\n\nSource: [[Reading notes/笔记方法对比.md#康奈尔笔记法|笔记方法对比 › 康奈尔笔记法]]\nIdentity: unknown\nEpistemic status: unverified\n## 康奈尔笔记法\n\n康奈尔笔记法把一页纸分成三栏：右侧笔记栏记录主要内容，左侧线索栏写关键词和提问，底部摘要栏用自己的话总结整页。课后按\"5R\"流程使用：记录（Record）、简化（Reduce）、背诵（Recite）、反思（Reflect）、复习（Review）。适合课堂听讲和阅读系统性教材。",
+        "hard_negative_keys": [
+          "A07",
+          "A15"
+        ],
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": true,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A01 Context 是什么",
+            "ok": true,
+            "reason": ""
+          },
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A15 常见问题示例",
+            "ok": true,
+            "reason": ""
+          },
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A07 Semantic Retrieval",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true
+      },
+      {
+        "case_id": "QT1",
+        "question": "帮我查找笔记：选中的内容太少，会不会影响回答质量？",
+        "tags": [
+          "core",
+          "quote-trap"
+        ],
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "根据检索到的笔记和你的选段，可以这样理解这个问题：\n\n**笔记中的相关说法（来源事实）**\n\n- 在 [[Reading notes/Agent Context Engineering 基准.md#A15 常见问题示例|Agent Context Engineering 基准 › A15 常见问题示例]] 中，恰恰收录了你这个问题，原文指出：\"'选中的内容太少，会不会影响回答质量？'——这类问题需要结合**选区作为 anchor 的定位**与**最小充分证据**的原则来理解。\"\n- 你选中的这段话本身也给出了一条原则：\"Retrieval quality matters more than retrieval volume: a small set of relevant passages beats a large noisy one\"——检索质量比数量更重要，一小段高度相关的内容胜过一大堆杂乱的内容。\n\n**怎么理解（解释）**\n\n把这两点合起来看：\n\n1. **选区的作用是\"锚点\"（anchor）**：你选中的段落主要功能不是提供全部知识，而是锁定你在问哪个话题、哪段文本。回答会围绕这个锚点展开，必要时再检索补充。\n2. **关键标准是\"最小充分证据\"，而不是\"越多越好\"**：只要选区 + 检索到的内容足以支撑一个可靠的回答，内容少并不是问题。真正伤质量的是内容*不相关*或*有噪声*——大量无关段落反而会稀释、干扰回答。\n\n**一个推断（这是我从原则推出的，不是笔记原文）**\n\n内容太少真正会有影响的情形是：选区虽然相关，但**不足以回答你的问题**（比如你问的是\"为什么\"，选段只给了结论），且检索也补不上来。这时好的做法不是硬答，而是说明证据不足——就像笔记里对 caching 问题的处理方式：\"本文未覆盖 caching，这属于超出本文范围的问题\"。\n\n**小结**：回答质量主要取决于证据的**相关性和充分性**，而非绝对数量。选中内容少本身不是问题；只有当它相关但不够充分、又没有检索补充时，才需要通过\"说明证据不足\"来保住回答的可靠性。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/5540aa7afe77a732c20dd2a66d9739f7",
+        "session_id": "132",
+        "turn_index": "1",
+        "resolved_query": "选中的内容太少，会不会影响回答质量？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/编程语言中的上下文.md",
+          "Reading notes/Agent Context Engineering 基准.md",
+          "Reading notes/笔记方法对比.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 4209,
+          "output": 759
+        },
+        "duration_ms": 30105,
+        "message_count": 9,
+        "metrics": {
+          "k": 3,
+          "retrieved_chunks": [
+            "A15",
+            "OTHER:笔记方法对比",
+            "OTHER:编程语言中的上下文"
+          ],
+          "bench_chunks": [
+            "A15"
+          ],
+          "other_notes": [
+            "笔记方法对比",
+            "编程语言中的上下文"
+          ],
+          "recall": 0,
+          "hnr": 0.3333333333333333,
+          "mrr": 0,
+          "ndcg": 0.11245065757013882,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "Source: [[Reading notes/Agent Context Engineering 基准.md#A15 常见问题示例|Agent Context Engineering 基准 › A15 常见问题示例]]\nIdentity: unknown\nEpistemic status: unverified\n## A15 常见问题示例\n\n读者在阅读本章时经常提出这样一些问题，收录于此供参考：\n\n有读者问\"帮我查找笔记：聊得越来越久以后，是不是之前每句话都会原封不动塞进下一次调用？\"——这属于对 compaction 的典型疑问，可参见前文关于压缩与裁剪的讨论。\n\n也有读者问\"选中的内容太少，会不会影响回答质量？\"——这类问题需要结合选区作为 anchor 的定位与最小充分证据的原则来理解。\n\n还有读者问\"笔记里有没有讲 caching 对上下文的影响？\"——本文未覆盖 caching，这属于超出本文范围的问题。\n\n---\n\nSource: [[Reading notes/笔记方法对比.md#康奈尔笔记法|笔记方法对比 › 康奈尔笔记法]]\nIdentity: unknown\nEpistemic status: unverified\n## 康奈尔笔记法\n\n康奈尔笔记法把一页纸分成三栏：右侧笔记栏记录主要内容，左侧线索栏写关键词和提问，底部摘要栏用自己的话总结整页。课后按\"5R\"流程使用：记录（Record）、简化（Reduce）、背诵（Recite）、反思（Reflect）、复习（Review）。适合课堂听讲和阅读系统性教材。\n---\nThe requested local passages were already supplied earlier in this run, or the shared local evidence character budget has been reached. Reuse the existing evidence.",
+        "hard_negative_keys": [
+          "A15"
+        ],
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": true,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A15 常见问题示例",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true
+      },
+      {
+        "case_id": "QT2",
+        "question": "帮我查找笔记：笔记里有没有讲 caching 对上下文的影响？",
+        "tags": [
+          "core",
+          "quote-trap",
+          "quote-legit",
+          "insufficient-evidence"
+        ],
+        "submit": "submitted",
+        "msgCount": 2,
+        "wait": "answer-shown",
+        "answer": "我检索了你的笔记，找到的相关内容如下：\n\n**笔记中的直接说明**（来自 [[Reading notes/Agent Context Engineering 基准.md#A15 常见问题示例|Agent Context Engineering 基准 › A15 常见问题示例]]）：\n\n> 还有读者问\"笔记里有没有讲 caching 对上下文的影响？\"——本文未覆盖 caching，这属于超出本文范围的问题。\n\n**结论**：就这次检索的结果而言，你的笔记（至少《Agent Context Engineering 基准》这篇）明确说 **没有覆盖 caching 对上下文的影响** 这个话题，把它列为超出范围的问题。\n\n需要说明两点限制：\n\n1. 我检索到的是与这个问题最相关的片段；如果其他笔记里有涉及 caching 的段落但措辞不同（比如用\"缓存\"而非 \"caching\"），检索可能会漏掉。如果你想更保险，我可以用别的关键词（如\"缓存\"、\"KV cache\"、\"prompt cache\"）再查一次。\n2. 检索还顺带返回了一条不相关的内容（[[Reading notes/编程语言中的上下文.md#执行上下文|编程语言中的上下文 › 执行上下文]]，讲 JavaScript 调用栈），和 caching 无关，可以忽略。\n\n如果你想了解 caching 对上下文窗口的一般性影响（笔记之外的知识），我也可以单独解释，但那就不属于笔记内容了。",
+        "trace_url": "http://localhost:3000/project/cmudl5ufk0006p0076vs4i8ix/traces/260a6555971fa08a7c192fff345967f6",
+        "session_id": "133",
+        "turn_index": "1",
+        "resolved_query": "笔记里有没有讲 caching 对上下文的影响？",
+        "relation": "NEW_TOPIC",
+        "retrieved_paths": [
+          "Reading notes/编程语言中的上下文.md",
+          "Reading notes/Agent Context Engineering 基准.md"
+        ],
+        "web_source_count": 0,
+        "tokens": {
+          "input": 1102,
+          "output": 343
+        },
+        "duration_ms": 9942,
+        "message_count": 5,
+        "metrics": {
+          "k": 2,
+          "retrieved_chunks": [
+            "A15",
+            "OTHER:编程语言中的上下文"
+          ],
+          "bench_chunks": [
+            "A15"
+          ],
+          "other_notes": [
+            "编程语言中的上下文"
+          ],
+          "recall": null,
+          "hnr": null,
+          "mrr": null,
+          "ndcg": null,
+          "precision": 0,
+          "noise_ratio": 1
+        },
+        "evidence": "",
+        "actual_action": "INCREMENTAL_RETRIEVAL",
+        "action_ok": true,
+        "citations": [
+          {
+            "path": "Reading notes/Agent Context Engineering 基准.md",
+            "heading": "A15 常见问题示例",
+            "ok": true,
+            "reason": ""
+          },
+          {
+            "path": "Reading notes/编程语言中的上下文.md",
+            "heading": "执行上下文",
+            "ok": true,
+            "reason": ""
+          }
+        ],
+        "citation_ok": true,
+        "abstain_ok": false
+      }
+    ]
+  },
+  "summary": {
+    "turns_total": 4,
+    "turns_answered": 4,
+    "action_accuracy": 1,
+    "action_scored_n": 4,
+    "routing_action_current": null,
+    "routing_action_ideal": null,
+    "recall": 0,
+    "recall_n": 3,
+    "ndcg": 0.07496710504675921,
+    "ndcg_n": 3,
+    "mrr": 0,
+    "precision": 0,
+    "noise_ratio": 1,
+    "citation_verifiability": 1,
+    "citation_n": 4,
+    "citation_failures": [],
+    "abstention": 0,
+    "abstention_n": 1,
+    "freshness_trigger": 0,
+    "freshness_n": 0,
+    "trap_resistance": 0,
+    "trap_n": 2
+  }
+}
