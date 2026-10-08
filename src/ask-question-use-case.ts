@@ -28,6 +28,12 @@ import type {
   HostedWebSearchType,
   ModelApiProtocol,
 } from "./responses-api";
+import {
+  endLangfuseGeneration,
+  endLangfuseSpan,
+  startLangfuseGeneration,
+  startLangfuseSpan,
+} from "./langfuse-telemetry";
 
 export interface AskQuestionModelUsage {
   inputTokens: number;
@@ -316,6 +322,19 @@ export class AskQuestionUseCase {
     ) => {
       throwIfAborted(signal, "The AI request was cancelled.");
       await emit("calling_model");
+      const lastUserMessage = [...runtimeMessages]
+        .reverse()
+        .find((message) => message?.role === "user");
+      const telemetryGenerationId = startLangfuseGeneration({
+        name: `model:${purpose || "answer"}`,
+        model: input.model.model,
+        input: {
+          lastUserMessage: String(lastUserMessage?.content || "").slice(0, 4000),
+          messageCount: runtimeMessages.length,
+          toolDefinitionCount: toolDefinitions.length,
+        },
+        metadata: { purpose: String(purpose || "answer") },
+      });
       let response: AskQuestionModelTransportResponse;
       try {
         response = await this.modelTransport.send({
@@ -332,6 +351,10 @@ export class AskQuestionUseCase {
           signal,
         });
       } catch (error) {
+        endLangfuseGeneration(telemetryGenerationId, {
+          error,
+          metadata: { failed: true },
+        });
         attachFailureDiagnostics(
           error,
           builtContext.receipt,
@@ -343,6 +366,21 @@ export class AskQuestionUseCase {
         throw error;
       }
       const usage = response.usage || emptyProviderUsage();
+      endLangfuseGeneration(telemetryGenerationId, {
+        output: String(response.assistantMessage?.content || "").slice(0, 4000),
+        usage: {
+          inputTokens: Number(usage.inputTokens || 0),
+          outputTokens: Number(usage.outputTokens || 0),
+          totalTokens: Number(usage.totalTokens || 0),
+          cachedInputTokens: Number(usage.cachedInputTokens || 0),
+          reasoningTokens: Number(usage.reasoningTokens || 0),
+        },
+        metadata: {
+          hostedToolCalls: Array.isArray(response.hostedToolCalls)
+            ? response.hostedToolCalls.length
+            : 0,
+        },
+      });
       modelCallDiagnostics.push({
         sequence: modelCallDiagnostics.length + 1,
         purpose: String(purpose || "answer"),
@@ -358,13 +396,27 @@ export class AskQuestionUseCase {
       collectedSources.push(...(response.sources || []));
       return response.assistantMessage;
     };
+    const openToolSpans = new Map<string, string>();
     const onRuntimeEvent = async (event: AgentRuntimeEvent) => {
       if (event.type === "tool_start") {
+        openToolSpans.set(
+          event.toolCallId || `${event.toolName}-${event.round}`,
+          startLangfuseSpan({
+            name: `tool:${event.toolName || "Tool"}`,
+            input: event.arguments,
+            metadata: { round: event.round },
+          }) || "",
+        );
         await emit("executing_tool", {
           toolName: event.toolName || "Tool",
           round: event.round,
         });
       } else if (event.type === "tool_result") {
+        const spanKey = event.toolCallId || `${event.toolName}-${event.round}`;
+        endLangfuseSpan(openToolSpans.get(spanKey) || null, {
+          output: String(event.result?.content || "").slice(0, 4000),
+        });
+        openToolSpans.delete(spanKey);
         await emit("calling_model", {
           completedTool: event.toolName || "Tool",
           round: event.round,

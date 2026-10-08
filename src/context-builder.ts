@@ -32,6 +32,7 @@ export interface ContextReceipt {
   localSources?: Array<{
     path: string;
     title: string;
+    heading?: string;
     identity: string;
     epistemicStatus: string;
   }>;

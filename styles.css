@@ -3239,6 +3239,10 @@
 
 .ai-agent-question-tree-select {
   display: grid;
+  box-sizing: border-box;
+  /* Obsidian pins every button to var(--input-height); opt out so a multi-line
+     question can grow the button and its tree row. */
+  height: auto;
   min-width: 0;
   min-height: var(--arc-control-height);
   grid-template-columns: auto minmax(0, 1fr);
@@ -3263,6 +3267,7 @@
 .ai-agent-question-tree-continue {
   display: inline-flex;
   width: auto;
+  height: auto;
   min-width: 0;
   min-height: var(--arc-control-height);
   align-items: center;

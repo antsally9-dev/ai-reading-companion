@@ -10,7 +10,7 @@ import {
 
 export const MAX_KNOWLEDGE_SEARCH_CALLS = 2;
 export const MAX_KNOWLEDGE_READ_CALLS = 2;
-export const MAX_KNOWLEDGE_RETRIEVAL_CALLS = 1;
+export const MAX_KNOWLEDGE_RETRIEVAL_CALLS = 2;
 const MAX_READ_REFS = 3;
 const MAX_SCOPE_RESULTS = MAX_KNOWLEDGE_READ_CALLS * MAX_READ_REFS;
 const MAX_PASSAGE_CHARACTERS = 6000;
@@ -82,10 +82,28 @@ export function findKnowledgeScopeForFile(
     .sort((left, right) => right.length - left.length)[0] || "";
 }
 
+// 查询停用词（P1 修正）：疑问词/口语衬词会污染词法和 n-gram 打分——
+// "Compaction 是什么意思" 里 "什么/是/意思" 的命中把 A01（标题含"是什么"）抬到
+// 标题就含 compaction 的 A04 之上（insight 套件 L1-T1 实测）。检索前先剥离。
+const QUERY_STOPWORDS = [
+  "什么", "怎么", "为什么", "如何", "哪些", "是不是", "有没有", "意思",
+  "帮我", "查找", "搜索", "检索", "笔记", "笔记里", "说的", "请问",
+  "一下", "还是", "就是", "这个", "那个", "它们", "我们", "你们",
+  "what", "how", "why", "mean", "means", "note", "notes", "please",
+];
+
+function stripQueryStopwords(value: string) {
+  let text = String(value || "");
+  for (const stopword of QUERY_STOPWORDS) {
+    text = text.split(stopword).join(" ");
+  }
+  return text.replace(/\s+/g, " ").trim();
+}
+
 function queryTerms(value: string) {
-  const normalized = String(value || "")
-    .normalize("NFKC")
-    .toLowerCase();
+  const normalized = stripQueryStopwords(
+    String(value || "").normalize("NFKC").toLowerCase(),
+  );
   const terms = new Set<string>();
   for (const word of normalized.match(/[a-z0-9][a-z0-9_-]{1,}/g) || []) {
     terms.add(word);
@@ -190,6 +208,52 @@ function scoreIndexedText(text: string, query: string) {
   return Math.min(24, score);
 }
 
+// —— 混合检索（P1）：字符 n-gram 余弦相似度 ——
+// 纯 includes 词汇匹配无法召回"表述不同但语义相同"的内容（benchmark S02/S04 的根因）。
+// 中文按汉字二元组、拉丁按词元切分，余弦归一化天然抗长度偏差；零依赖、离线可用。
+// 真正的 embedding 后端（KnowledgeSearchBackend 接口化）留给后续版本，排序权重可直接复用。
+export function ngramSimilarity(a: string, b: string) {
+  const fa = ngramTermFrequencies(a);
+  const fb = ngramTermFrequencies(b);
+  if (!fa.size || !fb.size) {
+    return 0;
+  }
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (const [gram, count] of fa) {
+    na += count * count;
+    const other = fb.get(gram);
+    if (other) {
+      dot += count * other;
+    }
+  }
+  for (const [, count] of fb) {
+    nb += count * count;
+  }
+  return dot / Math.sqrt(na * nb);
+}
+
+function ngramTermFrequencies(text: string) {
+  const normalized = String(text || "").toLowerCase().normalize("NFKC");
+  const frequencies = new Map<string, number>();
+  for (const token of normalized.match(/[a-z0-9][a-z0-9-]{2,}/g) || []) {
+    frequencies.set(token, (frequencies.get(token) || 0) + 1);
+  }
+  const cjk = normalized.replace(/[^\p{Script=Han}]/gu, "");
+  for (let index = 0; index + 2 <= cjk.length; index += 1) {
+    const gram = cjk.slice(index, index + 2);
+    frequencies.set(gram, (frequencies.get(gram) || 0) + 1);
+  }
+  return frequencies;
+}
+
+// 语义召回门槛：低于该余弦值的候选不进入排序（防止语义分把无关笔记全带进来）
+const SEMANTIC_FILE_THRESHOLD = 0.22;
+const SEMANTIC_FILE_WEIGHT = 10;
+const SEMANTIC_PASSAGE_THRESHOLD = 0.12;
+const SEMANTIC_PASSAGE_WEIGHT = 12;
+
 function balanceIdentityLanes<T extends { identity: KnowledgeIdentity; score: number }>(
   candidates: T[],
   limit: number,
@@ -241,7 +305,23 @@ function splitMarkdownPassages(markdown: string) {
     }
     buffer = [];
   };
+  let inFrontmatter = false;
+  let frontmatterDone = false;
   for (const line of String(markdown || "").split(/\r?\n/)) {
+    if (!frontmatterDone) {
+      if (!inFrontmatter && line.trim() === "---") {
+        inFrontmatter = true;
+        continue;
+      }
+      if (inFrontmatter && line.trim() === "---") {
+        inFrontmatter = false;
+        frontmatterDone = true;
+        continue;
+      }
+      if (inFrontmatter) {
+        continue;
+      }
+    }
     const headingMatch = line.match(/^#{1,6}\s+(.+)$/);
     if (headingMatch) {
       flush();
@@ -255,7 +335,16 @@ function splitMarkdownPassages(markdown: string) {
     }
   }
   flush();
-  return passages;
+  // 跳过纯标题块：去掉标题行后没有实质文本的段落（典型是 H1 标题行，
+  // 它与文件名重复计分，会在 scorePassage 中吸走全部命中、挤掉真正的内容段落）。
+  return passages.filter((passage) => {
+    const body = passage.content
+      .split("\n")
+      .filter((line) => !/^#{1,6}\s+/.test(line))
+      .join("\n")
+      .trim();
+    return Boolean(body);
+  });
 }
 
 function scorePassage(passage: { heading: string; content: string }, query: string) {
@@ -270,7 +359,34 @@ function scorePassage(passage: { heading: string; content: string }, query: stri
       score += 2;
     }
   }
+  const semantic = ngramSimilarity(stripQueryStopwords(query), `${passage.heading} ${passage.content}`);
+  if (semantic >= SEMANTIC_PASSAGE_THRESHOLD) {
+    score += semantic * SEMANTIC_PASSAGE_WEIGHT;
+  }
+  // 引文陷阱的处理在 read() 的块级选择处做相对降权（见 read 内注释）
   return score;
+}
+
+// 引文陷阱检测：块内包含查询/用户原问的 ≥10 字连续原文（保留原标点与衬词的
+// 原文匹配——去停用词后的窗口串无法匹配块内原文，A15 曾因此漏检）。
+// 同时检查检索查询与用户原始问题：模型改写过的工具查询会绕开逐字检测，
+// 但陷阱块对改写查询依然高分。
+function containsAnyQueryQuote(queries: string[], lowercasedText: string) {
+  for (const query of queries) {
+    const normalized = String(query || "")
+      .toLowerCase()
+      .replace(/\s+/g, "");
+    if (normalized.length < 10) {
+      continue;
+    }
+    const windowSize = 10;
+    for (let index = 0; index + windowSize <= normalized.length; index += 2) {
+      if (lowercasedText.includes(normalized.slice(index, index + windowSize))) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function normalizedQuery(value: string) {
@@ -290,6 +406,7 @@ export class KnowledgeScopeRetriever {
   private app: App;
   private scopePath: string;
   private currentFilePath: string;
+  private userQuestion: string;
   private signal?: AbortSignal;
   private nextSourceRef = 1;
   private sourceRefs = new Map<string, SourceReference>();
@@ -298,12 +415,14 @@ export class KnowledgeScopeRetriever {
   private markdownCache = new Map<string, { mtime: number; markdown: string }>();
   private passageCache = new Map<string, { block: string; evidenceKey: string }>();
   private emittedEvidenceKeys = new Set<string>();
+  private emittedEvidenceTexts: string[] = [];
   private totalReadCharacters = 0;
   private usedSources = new Map<
     string,
     {
       path: string;
       title: string;
+      heading?: string;
       identity: KnowledgeIdentity;
       epistemicStatus: EpistemicStatus;
     }
@@ -313,11 +432,13 @@ export class KnowledgeScopeRetriever {
     app: App;
     scopePath: string;
     currentFilePath?: string;
+    userQuestion?: string;
     signal?: AbortSignal;
   }) {
     this.app = options.app;
     this.scopePath = normalizedPath(options.scopePath);
     this.currentFilePath = normalizedPath(options.currentFilePath || "");
+    this.userQuestion = String(options.userQuestion || "");
     this.signal = options.signal;
   }
 
@@ -410,12 +531,28 @@ export class KnowledgeScopeRetriever {
         const cache = this.app.metadataCache.getFileCache(file);
         const scored = scoreMetadata(file, cache, query);
         const bodyScore = scoreIndexedText(index.get(file.path)?.text || "", query);
+        // 混合检索：词汇命中 + 语义余弦（文件名/标题/别名维度）
+        const semanticText = [
+          file.basename || "",
+          cacheHeadings(cache).join(" "),
+          cacheAliases(cache).join(" "),
+        ].join(" ");
+        const semanticScore = ngramSimilarity(stripQueryStopwords(query), semanticText);
+        const semanticBonus =
+          semanticScore >= SEMANTIC_FILE_THRESHOLD
+            ? semanticScore * SEMANTIC_FILE_WEIGHT
+            : 0;
         const identity = classifyKnowledgeIdentity(file, cache);
         return {
           file,
           cache,
-          score: scored.score + bodyScore,
-          reasons: bodyScore > 0 ? [...scored.reasons, "body"] : scored.reasons,
+          score: scored.score + bodyScore + semanticBonus,
+          reasons:
+            semanticBonus > 0
+              ? [...new Set([...scored.reasons, ...(bodyScore > 0 ? ["body"] : []), "semantic"])]
+              : bodyScore > 0
+                ? [...scored.reasons, "body"]
+                : scored.reasons,
           ...identity,
         };
       })
@@ -481,6 +618,7 @@ export class KnowledgeScopeRetriever {
         if (!this.emittedEvidenceKeys.has(cachedPassage.evidenceKey)) {
           this.emittedEvidenceKeys.add(cachedPassage.evidenceKey);
           blocks.push(cachedPassage.block);
+          this.emittedEvidenceTexts.push(cachedPassage.block);
         }
         continue;
       }
@@ -499,8 +637,30 @@ export class KnowledgeScopeRetriever {
           markdown,
         });
       }
-      const passage = splitMarkdownPassages(markdown)
-        .map((item) => ({ ...item, score: scorePassage(item, reference.query) }))
+      // 块级选择 + 引文陷阱相对降权：逐字引用了查询原文的块（把问句当例句，
+      // 如 A15）基础分极高（词汇+n-gram 双满分），固定折扣压不住；改为相对降权——
+      // 有非引用块得分时，引用块上限压到最佳非引用块的一半；全是引用块则保留
+      // （合法引用正例：元信息块声明"本文未覆盖 X"时就该被选出）。
+      const scoredPassages = splitMarkdownPassages(markdown).map((item) => ({
+        ...item,
+        score: scorePassage(item, reference.query),
+        quotesQuery: containsAnyQueryQuote(
+          [reference.query, this.userQuestion],
+          `${item.heading} ${item.content}`.toLowerCase(),
+        ),
+      }));
+      const bestNonQuoting = Math.max(
+        0,
+        ...scoredPassages.filter((item) => !item.quotesQuery).map((item) => item.score),
+      );
+      const passage = scoredPassages
+        .map((item) => ({
+          ...item,
+          score:
+            item.quotesQuery && bestNonQuoting > 0
+              ? Math.min(item.score, bestNonQuoting * 0.5)
+              : item.score,
+        }))
         .sort((left, right) => right.score - left.score)[0];
       if (!passage || passage.score <= 0) {
         continue;
@@ -517,6 +677,7 @@ export class KnowledgeScopeRetriever {
       this.usedSources.set(reference.file.path, {
         path: reference.file.path,
         title: reference.file.basename,
+        heading: passage.heading || "",
         identity: reference.identity,
         epistemicStatus: reference.epistemicStatus,
       });
@@ -536,11 +697,17 @@ export class KnowledgeScopeRetriever {
       if (!this.emittedEvidenceKeys.has(evidenceKey)) {
         this.emittedEvidenceKeys.add(evidenceKey);
         blocks.push(block);
+        this.emittedEvidenceTexts.push(block);
       }
     }
     return blocks.length
       ? blocks.join("\n\n---\n\n")
       : "The requested local passages were already supplied earlier in this run, or the shared local evidence character budget has been reached. Reuse the existing evidence.";
+  }
+
+  // 本轮真实发给模型的全部证据块原文（faithfulness 引文核对用）
+  getEvidenceTexts(): string[] {
+    return [...this.emittedEvidenceTexts];
   }
 
   getUsedSources() {
@@ -558,10 +725,36 @@ export class KnowledgeScopeRetriever {
     }
     return [
       `Knowledge scope: ${this.scopePath}`,
-      "The following passages were retrieved from the user's selected Obsidian scope. They may be personal notes or imported material; do not assume ownership or mastery unless the text explicitly says so. Cite them with the supplied Obsidian links.",
+      "The following passages were retrieved just now from the user's authorized Obsidian folder, specifically for the current question. They are the local evidence for this turn: use them, and cite them with the supplied Obsidian links exactly as given — keep the exact heading text and do not rename or paraphrase headings. If they do not cover the question, say plainly that the notes do not cover it instead of inventing sources. The notes may be personal or imported material; do not assume ownership or mastery unless the text explicitly says so.",
       "",
       evidence,
     ].join("\n");
+  }
+
+  // 证据清单（P1 引用对账用）：本轮真实读过的每个文件 + 该文件的全部标题，
+  // 供 citation sanitizer 校验/修复答案里的 [[..#..]] 引用。
+  getEvidenceInventory(): Array<{
+    path: string;
+    title: string;
+    heading: string;
+    headings: string[];
+  }> {
+    return [...this.usedSources.values()].map((source) => {
+      const file = this.app.vault.getAbstractFileByPath(source.path);
+      const cache =
+        file && (file as any).extension === "md"
+          ? this.app.metadataCache.getFileCache(file as TFile)
+          : null;
+      const headings = ((cache?.headings || []) as Array<{ heading?: string }>)
+        .map((item) => String(item.heading || "").trim())
+        .filter(Boolean);
+      return {
+        path: source.path,
+        title: source.title,
+        heading: source.heading || "",
+        headings,
+      };
+    });
   }
 
   createTools(): AgentRuntimeTool[] {
@@ -572,7 +765,7 @@ export class KnowledgeScopeRetriever {
           function: {
             name: "RetrieveKnowledgeEvidence",
             description:
-              "Retrieve a few directly relevant passages from the already-authorized Obsidian folder. Use at most once, only when the user explicitly asks to connect, find, or compare existing notes. Search and passage reading are completed together.",
+              "Retrieve directly relevant passages from the already-authorized Obsidian folder (the article being read and sibling notes). Use it whenever the question depends on document content beyond the selected passage — including follow-up questions that change topic or need evidence not yet shown. Prefer one well-formed, self-contained query (resolve pronouns against the conversation); a second, different query is allowed when the evidence is clearly insufficient. Search and passage reading are completed together.",
             parameters: {
               type: "object",
               properties: {
